@@ -71,6 +71,9 @@ function loadData() {
     }
     initializeAccounts();
     updateUI();
+
+    // Проверяем, нужно ли показать модальное окно
+    setTimeout(checkFirstLaunch, 500); // Небольшая задержка для красоты
 }
 
 function initializeAccounts() {
@@ -405,45 +408,6 @@ function saveTransaction() {
     saveData();
     hideForm();
     tg.showAlert(`✅ ${currentType === 'income' ? 'Доход' : 'Расход'} добавлен: ${formatMoney(amount)}`);
-}
-
-function showBalanceForm() {
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('balanceForm').style.display = 'block';
-    document.getElementById('initialBalance').value = '';
-}
-
-function hideBalanceForm() {
-    document.getElementById('balanceForm').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-}
-
-function setInitialBalance() {
-    const balance = parseFloat(document.getElementById('initialBalance').value);
-    if (isNaN(balance) || balance < 0) {
-        tg.showAlert('Введите корректную сумму');
-        return;
-    }
-    const account = appState.accounts.find(a => a.id === appState.activeAccount);
-    const oldBalance = account.balance;
-    account.balance = balance;
-    if (balance > oldBalance) {
-        appState.transactions.push({
-            id: Date.now(),
-            accountId: appState.activeAccount,
-            type: 'income',
-            amount: balance - oldBalance,
-            category: 'initial',
-            description: 'Пополнение счета',
-            date: new Date().toISOString()
-        });
-    }
-    updateAccountSelector();
-    updateAccountsSummary();
-    updateUI();
-    saveData();
-    hideBalanceForm();
-    tg.showAlert(`✅ Счет пополнен: ${formatMoney(balance)}`);
 }
 
 function showBudgetForm() {
@@ -822,3 +786,66 @@ document.addEventListener('DOMContentLoaded', loadData);
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
 }
+// Показ модального окна при первом запуске
+function checkFirstLaunch() {
+    const hasInitialBalance = localStorage.getItem('initialBalanceSet');
+    if (!hasInitialBalance && appState.accounts[0].balance === 0) {
+        showInitialBalanceModal();
+    }
+}
+
+// Показать модальное окно
+function showInitialBalanceModal() {
+    document.getElementById('initialBalanceModal').style.display = 'flex';
+}
+
+// Скрыть модальное окно
+function hideInitialBalanceModal() {
+    document.getElementById('initialBalanceModal').style.display = 'none';
+}
+
+// Установка начального баланса из модального окна
+function setInitialBalanceFromModal() {
+    const balance = parseFloat(document.getElementById('initialBalanceInput').value);
+
+    if (isNaN(balance) || balance < 0) {
+        tg.showAlert('Введите корректную сумму');
+        return;
+    }
+
+    const account = appState.accounts.find(a => a.id === appState.activeAccount);
+    const oldBalance = account.balance;
+    account.balance = balance;
+
+    if (balance > oldBalance) {
+        appState.transactions.push({
+            id: Date.now(),
+            accountId: appState.activeAccount,
+            type: 'income',
+            amount: balance - oldBalance,
+            category: 'initial',
+            description: 'Начальный баланс',
+            date: new Date().toISOString()
+        });
+    }
+
+    // Отмечаем что начальный баланс установлен
+    localStorage.setItem('initialBalanceSet', 'true');
+
+    updateAccountSelector();
+    updateAccountsSummary();
+    updateUI();
+    saveData();
+    hideInitialBalanceModal();
+
+    tg.showAlert(`✅ Начальный баланс установлен: ${formatMoney(balance)}`);
+}
+
+// Пропустить установку начального баланса
+function skipInitialBalance() {
+    localStorage.setItem('initialBalanceSet', 'skipped');
+    hideInitialBalanceModal();
+}
+
+// Удаляем старую функцию showBalanceForm и связанные с ней
+// (можно удалить функции showBalanceForm, hideBalanceForm, setInitialBalance - старые)

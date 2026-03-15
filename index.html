@@ -33,8 +33,8 @@
 
             <div class="account-stats" id="accountStats"></div>
 
+            <!-- Только кнопка перевода, без пополнения -->
             <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn btn-small" onclick="showBalanceForm()" style="flex: 1;">✏️ Пополнить</button>
                 <button class="btn btn-small btn-transfer" onclick="showTransferForm()" style="flex: 1;">🔄 Перевод</button>
             </div>
         </div>
@@ -226,26 +226,6 @@
         </div>
     </div>
 
-    <!-- Форма пополнения счета -->
-    <div id="balanceForm" class="form-modal" style="display: none;">
-        <div class="form-header">
-            <h2>💰 Пополнить счет</h2>
-            <button class="close-btn" onclick="hideBalanceForm()">✖</button>
-        </div>
-
-        <div class="form-body">
-            <div class="form-group">
-                <label>Сумма пополнения (₽)</label>
-                <input type="number" id="initialBalance" placeholder="10000" step="0.01">
-            </div>
-        </div>
-
-        <div class="form-footer">
-            <button class="btn btn-primary" onclick="setInitialBalance()">✅ Пополнить</button>
-            <button class="btn btn-secondary" onclick="hideBalanceForm()">❌ Отмена</button>
-        </div>
-    </div>
-
     <!-- Форма установки бюджета -->
     <div id="budgetForm" class="form-modal" style="display: none;">
         <div class="form-header">
@@ -334,5 +314,16 @@
 
     <!-- JavaScript -->
     <script src="script.js"></script>
+    <!-- Модальное окно начального баланса -->
+<div id="initialBalanceModal" class="initial-balance-modal" style="display: none;">
+    <div class="initial-balance-content">
+        <div class="initial-balance-icon">💰</div>
+        <div class="initial-balance-title">Добро пожаловать!</div>
+        <div class="initial-balance-subtitle">Установите начальный баланс вашего счета</div>
+        <input type="number" id="initialBalanceInput" class="initial-balance-input" placeholder="0" step="0.01">
+        <button class="initial-balance-button" onclick="setInitialBalanceFromModal()">Начать учет</button>
+        <div class="initial-balance-skip" onclick="skipInitialBalance()">Пропустить</div>
+    </div>
+</div>
 </body>
 </html>
