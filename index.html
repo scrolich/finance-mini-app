@@ -37,10 +37,15 @@
         button.expense {
             background: #f44336;
         }
+        button.sync {
+            background: #4CAF50;
+            margin-bottom: 10px;
+        }
         .history {
             background: white;
             border-radius: 10px;
             padding: 15px;
+            margin-top: 20px;
         }
         .item {
             display: flex;
@@ -52,6 +57,13 @@
             text-align: center;
             color: #666;
             margin-top: 10px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .sync-status {
+            text-align: center;
+            color: #4CAF50;
+            margin: 5px 0;
             font-size: 12px;
         }
     </style>
@@ -64,6 +76,9 @@
         <button class="expense" onclick="spendMoney()">💸 Расход</button>
     </div>
 
+    <button class="sync" onclick="forceSync()">🔄 Принудительная синхронизация</button>
+    <div class="sync-status" id="syncStatus"></div>
+
     <div class="history" id="history"></div>
     <div class="status" id="status">Готов</div>
 
@@ -73,18 +88,59 @@
 
         let balance = 0;
         let transactions = [];
+        let userId = tg.initDataUnsafe?.user?.id || 'unknown';
+        let syncInProgress = false;
 
         // Загрузка при старте
-        async function loadData() {
-            let saved = localStorage.getItem('finance');
+        function loadData() {
+            let saved = localStorage.getItem('finance_' + userId);
             if (saved) {
                 let data = JSON.parse(saved);
                 balance = data.balance || 0;
                 transactions = data.transactions || [];
                 updateUI();
+                document.getElementById('status').innerText = '📦 Загружено локально';
+            } else {
+                // Если нет локальных данных, запрашиваем с сервера
+                requestFromServer();
             }
-            // Запрашиваем с сервера
-            tg.sendData(JSON.stringify({action: 'load'}));
+        }
+
+        // Запрос данных с сервера
+        function requestFromServer() {
+            document.getElementById('syncStatus').innerText = '🔄 Запрос данных...';
+            tg.sendData(JSON.stringify({
+                action: 'load',
+                userId: userId
+            }));
+        }
+
+        // Отправка данных на сервер
+        function sendToServer() {
+            if (syncInProgress) return;
+
+            syncInProgress = true;
+            document.getElementById('syncStatus').innerText = '🔄 Сохранение...';
+
+            tg.sendData(JSON.stringify({
+                action: 'save',
+                userId: userId,
+                balance: balance,
+                transactions: transactions
+            }));
+
+            // Таймаут для сброса статуса
+            setTimeout(() => {
+                syncInProgress = false;
+                if (document.getElementById('syncStatus').innerText.includes('🔄')) {
+                    document.getElementById('syncStatus').innerText = '';
+                }
+            }, 2000);
+        }
+
+        // Принудительная синхронизация
+        function forceSync() {
+            requestFromServer();
         }
 
         // Обновление экрана
@@ -92,35 +148,31 @@
             document.getElementById('balance').innerText = balance.toFixed(2) + ' ₽';
 
             let html = '<h3>История</h3>';
-            transactions.slice(-5).reverse().forEach(t => {
-                let sign = t.type === 'income' ? '+' : '-';
-                let color = t.type === 'income' ? '#4CAF50' : '#f44336';
-                html += `<div class="item">
-                    <span>${t.desc || 'Операция'}</span>
-                    <span style="color: ${color}">${sign}${t.amount} ₽</span>
-                </div>`;
-            });
+            if (transactions.length === 0) {
+                html += '<div class="item">Нет операций</div>';
+            } else {
+                transactions.slice(-10).reverse().forEach(t => {
+                    let sign = t.type === 'income' ? '+' : '-';
+                    let color = t.type === 'income' ? '#4CAF50' : '#f44336';
+                    html += `<div class="item">
+                        <span>${t.desc || 'Операция'}</span>
+                        <span style="color: ${color}">${sign}${t.amount} ₽</span>
+                    </div>`;
+                });
+            }
             document.getElementById('history').innerHTML = html;
 
-            // Сохраняем
-            localStorage.setItem('finance', JSON.stringify({
+            // Сохраняем локально
+            localStorage.setItem('finance_' + userId, JSON.stringify({
                 balance: balance,
-                transactions: transactions
+                transactions: transactions,
+                lastUpdate: Date.now()
             }));
-
-            // Отправляем на сервер
-            tg.sendData(JSON.stringify({
-                action: 'save',
-                balance: balance,
-                transactions: transactions
-            }));
-
-            document.getElementById('status').innerText = '✅ Сохранено';
         }
 
         // Добавить доход
         function addMoney() {
-            let amount = prompt('Сумма дохода:');
+            let amount = prompt('Сумма дохода:', '1000');
             if (amount && !isNaN(amount)) {
                 amount = parseFloat(amount);
                 balance += amount;
@@ -131,12 +183,14 @@
                     date: new Date().toISOString()
                 });
                 updateUI();
+                sendToServer();
+                document.getElementById('status').innerText = '✅ Добавлено';
             }
         }
 
         // Добавить расход
         function spendMoney() {
-            let amount = prompt('Сумма расхода:');
+            let amount = prompt('Сумма расхода:', '500');
             if (amount && !isNaN(amount)) {
                 amount = parseFloat(amount);
                 if (amount > balance) {
@@ -151,21 +205,42 @@
                     date: new Date().toISOString()
                 });
                 updateUI();
+                sendToServer();
+                document.getElementById('status').innerText = '✅ Списано';
             }
         }
 
-        // Слушаем ответ от бота
+        // Слушаем сообщения от бота
         window.addEventListener('message', (event) => {
             try {
                 let data = JSON.parse(event.data);
-                if (data.balance !== undefined) {
-                    balance = data.balance;
-                    transactions = data.transactions || [];
-                    updateUI();
-                    document.getElementById('status').innerText = '📦 Загружено с сервера';
+                console.log('Получено от бота:', data);
+
+                if (data.action === 'sync') {
+                    // Получены данные с сервера
+                    if (data.balance !== undefined) {
+                        balance = data.balance;
+                        transactions = data.transactions || [];
+                        updateUI();
+                        document.getElementById('syncStatus').innerText = '✅ Данные загружены с сервера';
+                        document.getElementById('status').innerText = '📦 Серверные данные';
+
+                        setTimeout(() => {
+                            document.getElementById('syncStatus').innerText = '';
+                        }, 3000);
+                    }
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.log('Ошибка парсинга:', e);
+            }
         });
+
+        // Периодическая синхронизация (каждые 10 секунд)
+        setInterval(() => {
+            if (transactions.length > 0) {
+                requestFromServer();
+            }
+        }, 10000);
 
         // Старт
         loadData();
