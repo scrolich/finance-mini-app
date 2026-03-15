@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Финансовый трекер</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,14 +14,12 @@
         <div class="header">
             <div class="balance-label">Текущий баланс</div>
             <div class="balance" id="balance">0 ₽</div>
-            <!-- Добавляем кнопку установки баланса -->
             <button class="btn btn-small" onclick="showBalanceForm()" style="margin-top: 10px;">
                 ✏️ Установить начальный баланс
             </button>
         </div>
 
         <!-- Кнопки действий -->
-
         <div class="actions">
             <button class="btn btn-income" onclick="showForm('income')">
                 <span class="btn-emoji">💰</span>
@@ -47,6 +46,54 @@
             </div>
         </div>
 
+        <!-- Переключатель валют -->
+        <div style="display: flex; gap: 10px; margin-bottom: 15px; justify-content: flex-end;">
+            <button class="currency-btn active-currency" onclick="setCurrency('RUB')" id="currency-rub">🇷🇺 RUB</button>
+            <button class="currency-btn" onclick="setCurrency('USD')" id="currency-usd">🇺🇸 USD</button>
+            <button class="currency-btn" onclick="setCurrency('EUR')" id="currency-eur">🇪🇺 EUR</button>
+        </div>
+
+        <!-- Графики -->
+        <div class="card">
+            <div class="card-title">📊 Аналитика</div>
+
+            <!-- Вкладки графиков -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button class="tab-btn active" onclick="showChart('categories')" id="tab-categories">По категориям</button>
+                <button class="tab-btn" onclick="showChart('daily')" id="tab-daily">По дням</button>
+                <button class="tab-btn" onclick="showChart('balance')" id="tab-balance">Баланс</button>
+            </div>
+
+            <!-- Контейнеры для графиков -->
+            <div id="chart-categories" style="height: 250px;">
+                <canvas id="categoriesChart"></canvas>
+            </div>
+
+            <div id="chart-daily" style="height: 250px; display: none;">
+                <canvas id="dailyChart"></canvas>
+            </div>
+
+            <div id="chart-balance" style="height: 250px; display: none;">
+                <canvas id="balanceChart"></canvas>
+            </div>
+
+            <!-- Статистика -->
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--hint-color);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>💰 Всего доходов:</span>
+                    <span class="income" id="totalIncome">0 ₽</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>💸 Всего расходов:</span>
+                    <span class="expense" id="totalExpense">0 ₽</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                    <span>📊 Разница:</span>
+                    <span id="totalDiff">0 ₽</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Последние операции -->
         <div class="card">
             <div class="card-title">📜 Последние операции</div>
@@ -64,9 +111,20 @@
             </div>
             <button class="btn btn-small" onclick="showBudgetForm()">Установить бюджет</button>
         </div>
+
+        <!-- Кнопка сброса -->
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-title">⚙️ Настройки</div>
+            <button class="btn btn-small btn-danger" onclick="resetAllData()" style="background: #f44336; color: white;">
+                🗑️ Сбросить все данные
+            </button>
+            <p style="color: var(--hint-color); font-size: 12px; margin-top: 10px;">
+                Внимание! Это удалит все ваши транзакции и обнулит баланс.
+            </p>
+        </div>
     </div>
 
-    <!-- Форма добавления транзакции (изначально скрыта) -->
+    <!-- Форма добавления транзакции -->
     <div id="transactionForm" class="form-modal" style="display: none;">
         <div class="form-header">
             <h2 id="formTitle">💰 Добавить доход</h2>
@@ -123,28 +181,7 @@
         </div>
     </div>
 
-    <!-- Форма установки бюджета -->
-    <div id="budgetForm" class="form-modal" style="display: none;">
-        <div class="form-header">
-            <h2>🎯 Установить бюджет</h2>
-            <button class="close-btn" onclick="hideBudgetForm()">✖</button>
-        </div>
-
-        <div class="form-body">
-            <div class="form-group">
-                <label>Месячный бюджет (₽)</label>
-                <input type="number" id="budgetInput" placeholder="Например: 50000">
-            </div>
-        </div>
-
-        <div class="form-footer">
-            <button class="btn btn-primary" onclick="saveBudget()">✅ Сохранить</button>
-            <button class="btn btn-secondary" onclick="hideBudgetForm()">❌ Отмена</button>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
-        <!-- Форма установки начального баланса -->
+    <!-- Форма установки баланса -->
     <div id="balanceForm" class="form-modal" style="display: none;">
         <div class="form-header">
             <h2>💰 Установить начальный баланс</h2>
@@ -166,5 +203,27 @@
             <button class="btn btn-secondary" onclick="hideBalanceForm()">❌ Отмена</button>
         </div>
     </div>
+
+    <!-- Форма установки бюджета -->
+    <div id="budgetForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>🎯 Установить бюджет</h2>
+            <button class="close-btn" onclick="hideBudgetForm()">✖</button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-group">
+                <label>Месячный бюджет (₽)</label>
+                <input type="number" id="budgetInput" placeholder="Например: 50000">
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="saveBudget()">✅ Сохранить</button>
+            <button class="btn btn-secondary" onclick="hideBudgetForm()">❌ Отмена</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>

@@ -1,4 +1,3 @@
-// script.js
 let tg = window.Telegram.WebApp;
 tg.expand();
 tg.MainButton.text = "Закрыть";
@@ -8,10 +7,25 @@ tg.MainButton.onClick(() => tg.close());
 let appState = {
     balance: 0,
     transactions: [],
-    budget: 0,
-    todayIncome: 0,
-    todayExpense: 0
+    budget: 0
 };
+
+// Переменные для графиков
+let categoriesChart = null;
+let dailyChart = null;
+let balanceChart = null;
+let currentChart = 'categories';
+
+// Переменные для валют
+let currentCurrency = 'RUB';
+const exchangeRates = {
+    'RUB': 1,
+    'USD': 0.011,
+    'EUR': 0.010
+};
+
+// Текущий тип транзакции
+let currentType = 'income';
 
 // Загружаем сохраненные данные
 function loadData() {
@@ -19,31 +33,22 @@ function loadData() {
         const saved = localStorage.getItem('financeData');
         if (saved) {
             appState = JSON.parse(saved);
-
-            // Если баланс 0, оставляем как есть
-            // Если есть тестовые данные, можно их показать
             console.log('Загружены данные:', appState);
         } else {
-            // Новый пользователь - начинаем с нуля
             appState = {
                 balance: 0,
                 transactions: [],
-                budget: 0,
-                todayIncome: 0,
-                todayExpense: 0
+                budget: 0
             };
             console.log('Новый пользователь, пустой баланс');
         }
         updateUI();
     } catch (e) {
         console.error('Ошибка загрузки:', e);
-        // Если ошибка - создаем чистый стейт
         appState = {
             balance: 0,
             transactions: [],
-            budget: 0,
-            todayIncome: 0,
-            todayExpense: 0
+            budget: 0
         };
         updateUI();
     }
@@ -53,7 +58,6 @@ function loadData() {
 function saveData() {
     try {
         localStorage.setItem('financeData', JSON.stringify(appState));
-        // Отправляем данные боту
         tg.sendData(JSON.stringify({
             type: 'sync',
             balance: appState.balance,
@@ -64,30 +68,55 @@ function saveData() {
     }
 }
 
-// Добавление транзакции
-function addTransaction(type, amount, category, description, date) {
-    const transaction = {
-        id: Date.now(),
-        type: type,
-        amount: amount,
-        category: category,
-        description: description,
-        date: date || new Date().toISOString()
-    };
+// Форматирование денег
+function formatMoney(amount) {
+    let value = amount * exchangeRates[currentCurrency];
 
-    appState.transactions.push(transaction);
-
-    // Обновляем баланс
-    if (type === 'income') {
-        appState.balance += amount;
+    if (currentCurrency === 'RUB') {
+        return value.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,') + ' ₽';
+    } else if (currentCurrency === 'USD') {
+        return '$' + value.toFixed(2);
     } else {
-        appState.balance -= amount;
+        return '€' + value.toFixed(2);
     }
+}
+
+// Установка валюты
+function setCurrency(currency) {
+    currentCurrency = currency;
+
+    // Обновляем активную кнопку
+    document.querySelectorAll('.currency-btn').forEach(btn => {
+        btn.classList.remove('active-currency');
+    });
+    document.getElementById(`currency-${currency.toLowerCase()}`).classList.add('active-currency');
 
     updateUI();
-    saveData();
+}
 
-    return transaction;
+// Получение названия категории
+function getCategoryName(category) {
+    const categories = {
+        'salary': '💼 Зарплата',
+        'gifts': '🎁 Подарки',
+        'investments': '📈 Инвестиции',
+        'freelance': '💻 Фриланс',
+        'food': '🍔 Еда',
+        'housing': '🏠 Жилье',
+        'transport': '🚗 Транспорт',
+        'clothes': '👕 Одежда',
+        'health': '💊 Здоровье',
+        'entertainment': '🎮 Развлечения',
+        'education': '📚 Образование',
+        'pets': '🐶 Животные',
+        'communication': '📱 Связь',
+        'gifts_expense': '🎁 Подарки',
+        'work': '💼 Работа',
+        'initial': '💰 Начальный баланс',
+        'other': '💰 Другое',
+        'other_expense': '💰 Другое'
+    };
+    return categories[category] || category;
 }
 
 // Обновление интерфейса
@@ -147,12 +176,14 @@ function updateUI() {
 
     // Бюджет
     updateBudgetUI();
+
+    // Графики
+    updateCharts();
 }
 
 // Обновление бюджета
 function updateBudgetUI() {
     if (appState.budget > 0) {
-        // Расходы за месяц
         const now = new Date();
         const monthExpenses = appState.transactions
             .filter(t => {
@@ -170,45 +201,250 @@ function updateBudgetUI() {
         document.getElementById('budgetAmount').textContent = formatMoney(appState.budget);
     } else {
         document.getElementById('budgetBar').style.width = '0%';
-        document.getElementById('spentAmount').textContent = '0 ₽';
-        document.getElementById('budgetAmount').textContent = '0 ₽';
+        document.getElementById('spentAmount').textContent = formatMoney(0);
+        document.getElementById('budgetAmount').textContent = formatMoney(0);
     }
 }
 
-// Форматирование денег
-function formatMoney(amount) {
-    return amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,') + ' ₽';
+// ==================== ГРАФИКИ ====================
+
+// Показать выбранный график
+function showChart(type) {
+    currentChart = type;
+
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`tab-${type}`).classList.add('active');
+
+    document.getElementById('chart-categories').style.display = type === 'categories' ? 'block' : 'none';
+    document.getElementById('chart-daily').style.display = type === 'daily' ? 'block' : 'none';
+    document.getElementById('chart-balance').style.display = type === 'balance' ? 'block' : 'none';
+
+    updateCharts();
 }
 
-// Получение названия категории
-function getCategoryName(category) {
-    const categories = {
-        // Доходы
-        'salary': '💼 Зарплата',
-        'gifts': '🎁 Подарки',
-        'investments': '📈 Инвестиции',
-        'freelance': '💻 Фриланс',
-
-        // Расходы
-        'food': '🍔 Еда',
-        'housing': '🏠 Жилье',
-        'transport': '🚗 Транспорт',
-        'clothes': '👕 Одежда',
-        'health': '💊 Здоровье',
-        'entertainment': '🎮 Развлечения',
-        'education': '📚 Образование',
-        'pets': '🐶 Животные',
-        'communication': '📱 Связь',
-        'gifts_expense': '🎁 Подарки',
-        'work': '💼 Работа',
-
-        // Другое
-        'other': '💰 Другое',
-        'other_expense': '💰 Другое'
-    };
-
-    return categories[category] || category;
+// Обновить все графики
+function updateCharts() {
+    updateCategoriesChart();
+    updateDailyChart();
+    updateBalanceChart();
+    updateTotals();
 }
+
+// График по категориям
+function updateCategoriesChart() {
+    const ctx = document.getElementById('categoriesChart').getContext('2d');
+
+    const now = new Date();
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const expensesByCategory = {};
+
+    appState.transactions.forEach(t => {
+        if (t.type === 'expense') {
+            const tDate = new Date(t.date);
+            if (tDate >= monthAgo) {
+                const catName = getCategoryName(t.category);
+                expensesByCategory[catName] = (expensesByCategory[catName] || 0) + t.amount;
+            }
+        }
+    });
+
+    if (Object.keys(expensesByCategory).length === 0) {
+        expensesByCategory['Нет данных'] = 1;
+    }
+
+    if (categoriesChart) {
+        categoriesChart.destroy();
+    }
+
+    categoriesChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(expensesByCategory),
+            datasets: [{
+                data: Object.values(expensesByCategory),
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                    '#FF9F40', '#FF6384', '#C9CBCF', '#7BC8A4', '#E7B9FF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: getComputedStyle(document.body).getPropertyValue('--text-color').trim() }
+                }
+            }
+        }
+    });
+}
+
+// График по дням
+function updateDailyChart() {
+    const ctx = document.getElementById('dailyChart').getContext('2d');
+
+    const labels = [];
+    const incomeData = [];
+    const expenseData = [];
+
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+        labels.push(dateStr);
+
+        let dayIncome = 0;
+        let dayExpense = 0;
+
+        appState.transactions.forEach(t => {
+            const tDate = new Date(t.date);
+            if (tDate.toDateString() === date.toDateString()) {
+                if (t.type === 'income') {
+                    dayIncome += t.amount;
+                } else {
+                    dayExpense += t.amount;
+                }
+            }
+        });
+
+        incomeData.push(dayIncome);
+        expenseData.push(dayExpense);
+    }
+
+    if (dailyChart) {
+        dailyChart.destroy();
+    }
+
+    dailyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Доходы',
+                    data: incomeData,
+                    backgroundColor: '#4CAF50',
+                },
+                {
+                    label: 'Расходы',
+                    data: expenseData,
+                    backgroundColor: '#F44336',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: getComputedStyle(document.body).getPropertyValue('--text-color').trim() }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-color').trim() }
+                },
+                x: {
+                    ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-color').trim() }
+                }
+            }
+        }
+    });
+}
+
+// График баланса
+function updateBalanceChart() {
+    const ctx = document.getElementById('balanceChart').getContext('2d');
+
+    const labels = [];
+    const balanceData = [];
+
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+        labels.push(dateStr);
+
+        let runningBalance = 0;
+
+        appState.transactions.forEach(t => {
+            const tDate = new Date(t.date);
+            if (tDate <= date) {
+                if (t.type === 'income') {
+                    runningBalance += t.amount;
+                } else {
+                    runningBalance -= t.amount;
+                }
+            }
+        });
+
+        balanceData.push(runningBalance);
+    }
+
+    if (balanceChart) {
+        balanceChart.destroy();
+    }
+
+    balanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Баланс',
+                data: balanceData,
+                borderColor: '#40A7E3',
+                backgroundColor: 'rgba(64, 167, 227, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-color').trim() }
+                },
+                x: {
+                    ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-color').trim() }
+                }
+            }
+        }
+    });
+}
+
+// Общая статистика
+function updateTotals() {
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    appState.transactions.forEach(t => {
+        if (t.type === 'income') {
+            totalIncome += t.amount;
+        } else {
+            totalExpense += t.amount;
+        }
+    });
+
+    document.getElementById('totalIncome').textContent = formatMoney(totalIncome);
+    document.getElementById('totalExpense').textContent = formatMoney(totalExpense);
+
+    const diff = totalIncome - totalExpense;
+    const diffElement = document.getElementById('totalDiff');
+    diffElement.textContent = formatMoney(diff);
+    diffElement.className = diff >= 0 ? 'income' : 'expense';
+}
+
+// ==================== ФОРМЫ ====================
 
 // Показ формы транзакции
 function showForm(type) {
@@ -217,13 +453,11 @@ function showForm(type) {
     document.getElementById('formTitle').textContent =
         type === 'income' ? '💰 Добавить доход' : '💸 Добавить расход';
 
-    // Показываем нужные категории
     document.getElementById('incomeCategories').style.display =
         type === 'income' ? 'block' : 'none';
     document.getElementById('expenseCategories').style.display =
         type === 'expense' ? 'block' : 'none';
 
-    // Устанавливаем сегодняшнюю дату
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('transactionDate').value = today;
 
@@ -236,7 +470,6 @@ function hideForm() {
     document.getElementById('transactionForm').style.display = 'none';
     document.getElementById('app').style.display = 'block';
 
-    // Очищаем форму
     document.getElementById('amount').value = '';
     document.getElementById('description').value = '';
 }
@@ -253,10 +486,29 @@ function saveTransaction() {
         return;
     }
 
-    addTransaction(currentType, amount, category, description, date);
+    const transaction = {
+        id: Date.now(),
+        type: currentType,
+        amount: amount,
+        category: category,
+        description: description,
+        date: date || new Date().toISOString()
+    };
+
+    appState.transactions.push(transaction);
+
+    if (currentType === 'income') {
+        appState.balance += amount;
+    } else {
+        appState.balance -= amount;
+    }
+
+    updateUI();
+    saveData();
     hideForm();
 }
-// Показ формы установки баланса
+
+// Показ формы баланса
 function showBalanceForm() {
     document.getElementById('app').style.display = 'none';
     document.getElementById('balanceForm').style.display = 'block';
@@ -278,10 +530,8 @@ function setInitialBalance() {
         return;
     }
 
-    // Устанавливаем баланс
     appState.balance = balance;
 
-    // Если баланс > 0, добавляем транзакцию для истории
     if (balance > 0) {
         appState.transactions.push({
             id: Date.now(),
@@ -299,6 +549,7 @@ function setInitialBalance() {
 
     tg.showAlert(`✅ Баланс установлен: ${formatMoney(balance)}`);
 }
+
 // Показ формы бюджета
 function showBudgetForm() {
     document.getElementById('app').style.display = 'none';
@@ -322,16 +573,28 @@ function saveBudget() {
     }
 
     appState.budget = budget;
-    updateBudgetUI();
+    updateUI();
     saveData();
     hideBudgetForm();
 
     tg.showAlert(`✅ Бюджет установлен: ${formatMoney(budget)}`);
 }
 
+// Сброс всех данных
+function resetAllData() {
+    if (confirm('Вы уверены? Все данные будут удалены!')) {
+        appState = {
+            balance: 0,
+            transactions: [],
+            budget: 0
+        };
+        localStorage.removeItem('financeData');
+        updateUI();
+        tg.showAlert('✅ Все данные сброшены');
+    }
+}
+
 // Инициализация
 document.addEventListener('DOMContentLoaded', () => {
     loadData();
-
-
 });
