@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Финансовый трекер</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Шапка с балансом -->
+        <div class="header">
+            <div class="balance-label">Текущий баланс</div>
+            <div class="balance" id="balance">0 ₽</div>
+        </div>
+
+        <!-- Кнопки действий -->
+        <div class="actions">
+            <button class="btn btn-income" onclick="showForm('income')">
+                <span class="btn-emoji">💰</span>
+                <span class="btn-text">Доход</span>
+            </button>
+            <button class="btn btn-expense" onclick="showForm('expense')">
+                <span class="btn-emoji">💸</span>
+                <span class="btn-text">Расход</span>
+            </button>
+        </div>
+
+        <!-- Статистика за сегодня -->
+        <div class="card">
+            <div class="card-title">📊 Сегодня</div>
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-label">Доходы</div>
+                    <div class="stat-value income" id="todayIncome">0 ₽</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Расходы</div>
+                    <div class="stat-value expense" id="todayExpense">0 ₽</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Последние операции -->
+        <div class="card">
+            <div class="card-title">📜 Последние операции</div>
+            <div id="history" class="history-list"></div>
+        </div>
+
+        <!-- Бюджет -->
+        <div class="card">
+            <div class="card-title">🎯 Бюджет месяца</div>
+            <div class="budget-progress">
+                <div class="progress-bar" id="budgetBar" style="width: 0%"></div>
+            </div>
+            <div class="budget-stats">
+                <span id="spentAmount">0 ₽</span> / <span id="budgetAmount">0 ₽</span>
+            </div>
+            <button class="btn btn-small" onclick="showBudgetForm()">Установить бюджет</button>
+        </div>
+    </div>
+
+    <!-- Форма добавления транзакции (изначально скрыта) -->
+    <div id="transactionForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2 id="formTitle">💰 Добавить доход</h2>
+            <button class="close-btn" onclick="hideForm()">✖</button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-group">
+                <label>Сумма (₽)</label>
+                <input type="number" id="amount" placeholder="Например: 5000" step="0.01">
+            </div>
+
+            <div class="form-group">
+                <label>Категория</label>
+                <select id="category">
+                    <optgroup label="Доходы" id="incomeCategories">
+                        <option value="salary">💼 Зарплата</option>
+                        <option value="gifts">🎁 Подарки</option>
+                        <option value="investments">📈 Инвестиции</option>
+                        <option value="freelance">💻 Фриланс</option>
+                        <option value="other">💰 Другое</option>
+                    </optgroup>
+                    <optgroup label="Расходы" id="expenseCategories" style="display: none;">
+                        <option value="food">🍔 Еда</option>
+                        <option value="housing">🏠 Жилье</option>
+                        <option value="transport">🚗 Транспорт</option>
+                        <option value="clothes">👕 Одежда</option>
+                        <option value="health">💊 Здоровье</option>
+                        <option value="entertainment">🎮 Развлечения</option>
+                        <option value="education">📚 Образование</option>
+                        <option value="pets">🐶 Животные</option>
+                        <option value="communication">📱 Связь</option>
+                        <option value="gifts_expense">🎁 Подарки</option>
+                        <option value="work">💼 Работа</option>
+                        <option value="other_expense">💰 Другое</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Описание (необязательно)</label>
+                <input type="text" id="description" placeholder="Что купили?">
+            </div>
+
+            <div class="form-group">
+                <label>Дата</label>
+                <input type="date" id="transactionDate">
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="saveTransaction()">✅ Сохранить</button>
+            <button class="btn btn-secondary" onclick="hideForm()">❌ Отмена</button>
+        </div>
+    </div>
+
+    <!-- Форма установки бюджета -->
+    <div id="budgetForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>🎯 Установить бюджет</h2>
+            <button class="close-btn" onclick="hideBudgetForm()">✖</button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-group">
+                <label>Месячный бюджет (₽)</label>
+                <input type="number" id="budgetInput" placeholder="Например: 50000">
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="saveBudget()">✅ Сохранить</button>
+            <button class="btn btn-secondary" onclick="hideBudgetForm()">❌ Отмена</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
