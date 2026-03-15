@@ -46,10 +46,6 @@
             background: var(--tg-theme-secondary-bg-color, #f0f0f0);
             color: var(--tg-theme-text-color, #000);
         }
-        button.sync {
-            background: #4CAF50;
-            margin-top: 10px;
-        }
         .form-modal {
             position: fixed;
             top: 0;
@@ -72,11 +68,12 @@
             border-radius: 12px;
             font-size: 16px;
         }
-        .status {
+        .sync-status {
             text-align: center;
             font-size: 12px;
             color: var(--tg-theme-hint-color, #999);
             margin-top: 10px;
+            padding: 5px;
         }
     </style>
 </head>
@@ -94,9 +91,8 @@
             <div id="todayStats">Доходы: 0 ₽ | Расходы: 0 ₽</div>
         </div>
 
-        <!-- Кнопка синхронизации -->
-        <button class="sync" onclick="syncData()" style="width: 100%;">🔄 Синхронизировать</button>
-        <div class="status" id="syncStatus"></div>
+        <!-- Статус синхронизации (автоматический) -->
+        <div class="sync-status" id="syncStatus">🔄 Загрузка...</div>
     </div>
 
     <!-- Форма транзакции -->
@@ -134,6 +130,7 @@
         let transactions = [];
         let currentType = 'income';
         let userId = tg.initDataUnsafe?.user?.id || 'unknown';
+        let syncInProgress = false;
 
         function formatMoney(amount) {
             return amount.toFixed(2) + ' ₽';
@@ -171,6 +168,37 @@
             document.getElementById('amount').value = '';
         }
 
+        // АВТОМАТИЧЕСКАЯ синхронизация с ботом
+        function syncWithBot() {
+            if (syncInProgress) return;
+
+            syncInProgress = true;
+            document.getElementById('syncStatus').textContent = '🔄 Синхронизация...';
+
+            let data = {
+                balance: balance,
+                transactions: transactions,
+                userId: userId
+            };
+
+            tg.sendData(JSON.stringify({
+                type: 'sync',
+                data: data
+            }));
+
+            // Показываем статус
+            setTimeout(() => {
+                document.getElementById('syncStatus').textContent = '✅ Синхронизировано';
+                syncInProgress = false;
+
+                // Через 3 секунды убираем сообщение
+                setTimeout(() => {
+                    document.getElementById('syncStatus').textContent = '🔄 Автосохранение';
+                }, 3000);
+            }, 1000);
+        }
+
+        // Сохранение транзакции
         function saveTransaction() {
             let amount = parseFloat(document.getElementById('amount').value);
             let category = document.getElementById('category').value;
@@ -199,83 +227,93 @@
             }
 
             // Сохраняем локально
-            saveToLocal();
+            localStorage.setItem('financeData', JSON.stringify({
+                balance: balance,
+                transactions: transactions
+            }));
 
-            // Отправляем боту
-            sendToBot();
+            // АВТОМАТИЧЕСКИ синхронизируем с ботом
+            syncWithBot();
 
             updateUI();
             hideForm();
             tg.showAlert('✅ Готово!');
         }
 
-        // Сохранение в localStorage
-        function saveToLocal() {
-            let data = {
-                balance: balance,
-                transactions: transactions,
-                lastSync: new Date().toISOString()
-            };
-            localStorage.setItem('financeData', JSON.stringify(data));
-            document.getElementById('syncStatus').textContent = '📥 Сохранено локально';
-        }
+        // Загрузка данных при старте
+        async function loadData() {
+            document.getElementById('syncStatus').textContent = '🔄 Загрузка...';
 
-        // Отправка данных боту
-        function sendToBot() {
-            let data = {
-                balance: balance,
-                transactions: transactions,
-                userId: userId
-            };
+            try {
+                // Сначала пробуем загрузить из localStorage
+                let saved = localStorage.getItem('financeData');
+                if (saved) {
+                    let data = JSON.parse(saved);
+                    balance = data.balance || 0;
+                    transactions = data.transactions || [];
+                    document.getElementById('syncStatus').textContent = '📦 Локальные данные';
+                }
 
-            tg.sendData(JSON.stringify({
-                type: 'sync',
-                data: data
-            }));
+                // Запрашиваем данные у бота (асинхронно)
+                tg.sendData(JSON.stringify({
+                    type: 'getData',
+                    userId: userId
+                }));
 
-            document.getElementById('syncStatus').textContent = '📤 Отправлено в облако';
-        }
-
-        // Синхронизация с ботом
-        function syncData() {
-            document.getElementById('syncStatus').textContent = '🔄 Синхронизация...';
-
-            // Запрашиваем данные у бота
-            tg.sendData(JSON.stringify({
-                type: 'getData',
-                userId: userId
-            }));
-        }
-
-        // Загрузка данных
-        try {
-            let saved = localStorage.getItem('financeData');
-            if (saved) {
-                let data = JSON.parse(saved);
-                balance = data.balance || 0;
-                transactions = data.transactions || [];
-                document.getElementById('syncStatus').textContent = '📦 Загружено локально';
+            } catch (e) {
+                console.log('Ошибка загрузки:', e);
+                document.getElementById('syncStatus').textContent = '⚠️ Ошибка загрузки';
             }
-        } catch (e) {
-            console.log('Ошибка загрузки');
+
+            updateUI();
         }
 
-        updateUI();
-
-        // Получение данных от бота
+        // Слушаем сообщения от бота
         window.addEventListener('message', function(event) {
             try {
                 let data = JSON.parse(event.data);
+
                 if (data.type === 'sync' && data.data) {
-                    balance = data.data.balance || 0;
-                    transactions = data.data.transactions || [];
-                    saveToLocal();
-                    updateUI();
-                    document.getElementById('syncStatus').textContent = '✅ Синхронизировано!';
-                    tg.showAlert('✅ Данные синхронизированы');
+                    // Получены данные от бота
+                    let serverData = data.data;
+
+                    // Сравниваем с локальными (выбираем последние)
+                    let localTime = localStorage.getItem('financeData') ?
+                        JSON.parse(localStorage.getItem('financeData')).lastUpdate : 0;
+                    let serverTime = serverData.lastUpdate || 0;
+
+                    if (serverTime > localTime || transactions.length === 0) {
+                        // Данные с сервера новее
+                        balance = serverData.balance || 0;
+                        transactions = serverData.transactions || [];
+
+                        localStorage.setItem('financeData', JSON.stringify({
+                            balance: balance,
+                            transactions: transactions,
+                            lastUpdate: Date.now()
+                        }));
+
+                        document.getElementById('syncStatus').textContent = '✅ Загружено с сервера';
+                        updateUI();
+                    }
                 }
             } catch (e) {}
         });
+
+        // Автоматическая синхронизация при выходе
+        window.addEventListener('beforeunload', function() {
+            syncWithBot();
+        });
+
+        // Периодическая синхронизация (каждые 30 секунд)
+        setInterval(() => {
+            if (transactions.length > 0) {
+                syncWithBot();
+            }
+        }, 30000);
+
+        // Старт
+        loadData();
     </script>
 </body>
 </html>
