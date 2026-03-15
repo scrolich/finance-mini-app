@@ -14,12 +14,15 @@ let appState = {
 };
 
 // Загружаем сохраненные данные
-// Загружаем сохраненные данные
 function loadData() {
     try {
         const saved = localStorage.getItem('financeData');
         if (saved) {
             appState = JSON.parse(saved);
+
+            // Если баланс 0, оставляем как есть
+            // Если есть тестовые данные, можно их показать
+            console.log('Загружены данные:', appState);
         } else {
             // Новый пользователь - начинаем с нуля
             appState = {
@@ -29,6 +32,7 @@ function loadData() {
                 todayIncome: 0,
                 todayExpense: 0
             };
+            console.log('Новый пользователь, пустой баланс');
         }
         updateUI();
     } catch (e) {
@@ -41,6 +45,7 @@ function loadData() {
             todayIncome: 0,
             todayExpense: 0
         };
+        updateUI();
     }
 }
 
