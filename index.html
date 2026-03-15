@@ -10,36 +10,49 @@
 </head>
 <body>
     <div id="app">
-            <!-- Шапка с выбором счета -->
-    <div class="header">
-        <div class="account-selector">
-            <select id="accountSelect" onchange="switchAccount()" class="account-select">
-                <!-- Счета будут добавляться динамически -->
-            </select>
-            <button class="btn-icon" onclick="showAccountForm()" title="Добавить счет">➕</button>
+        <!-- Шапка с выбором счета -->
+        <div class="header">
+            <div class="account-selector">
+                <select id="accountSelect" onchange="switchAccount()" class="account-select">
+                    <!-- Счета будут добавляться динамически -->
+                </select>
+                <button class="btn-icon" onclick="showAccountForm()" title="Добавить счет">➕</button>
+            </div>
+
+            <div class="balance-label">Текущий баланс</div>
+            <div class="balance" id="balance">0 ₽</div>
+
+            <div class="account-stats" id="accountStats">
+                <!-- Статистика по счету -->
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-small" onclick="showBalanceForm()" style="flex: 1;">
+                    ✏️ Пополнить
+                </button>
+                <button class="btn btn-small btn-transfer" onclick="showTransferForm()" style="flex: 1;">
+                    🔄 Перевод
+                </button>
+            </div>
         </div>
 
-        <div class="balance-label">Текущий баланс</div>
-        <div class="balance" id="balance">0 ₽</div>
-
-        <div class="account-stats" id="accountStats">
-            <!-- Статистика по счету -->
+        <!-- КНОПКИ ДОХОДА И РАСХОДА - ВОЗВРАЩАЕМ! -->
+        <div class="actions">
+            <button class="btn btn-income" onclick="showForm('income')">
+                <span class="btn-emoji">💰</span>
+                <span class="btn-text">Доход</span>
+            </button>
+            <button class="btn btn-expense" onclick="showForm('expense')">
+                <span class="btn-emoji">💸</span>
+                <span class="btn-text">Расход</span>
+            </button>
         </div>
 
-        <button class="btn btn-small" onclick="showBalanceForm()" style="margin-top: 10px;">
-            ✏️ Пополнить счет
-        </button>
-
-        <button class="btn btn-small btn-transfer" onclick="showTransferForm()" style="margin-top: 5px;">
-            🔄 Перевод между счетами
-        </button>
-    </div>
-
-    <!-- После кнопок действий добавить сводку по всем счетам -->
-    <div class="card">
-        <div class="card-title">🏦 Все счета</div>
-        <div id="accountsSummary" class="accounts-summary"></div>
-    </div>
+        <!-- Сводка по всем счетам -->
+        <div class="card">
+            <div class="card-title">🏦 Все счета</div>
+            <div id="accountsSummary" class="accounts-summary"></div>
+        </div>
 
         <!-- Статистика за сегодня -->
         <div class="card">
@@ -191,25 +204,22 @@
         </div>
     </div>
 
-    <!-- Форма установки баланса -->
+    <!-- Форма пополнения счета -->
     <div id="balanceForm" class="form-modal" style="display: none;">
         <div class="form-header">
-            <h2>💰 Установить начальный баланс</h2>
+            <h2>💰 Пополнить счет</h2>
             <button class="close-btn" onclick="hideBalanceForm()">✖</button>
         </div>
 
         <div class="form-body">
             <div class="form-group">
-                <label>Текущая сумма на счету (₽)</label>
-                <input type="number" id="initialBalance" placeholder="Например: 100000" step="0.01">
+                <label>Сумма пополнения (₽)</label>
+                <input type="number" id="initialBalance" placeholder="Например: 10000" step="0.01">
             </div>
-            <p style="color: var(--hint-color); font-size: 12px; margin-top: 5px;">
-                ℹ️ Эта сумма будет установлена как ваш текущий баланс
-            </p>
         </div>
 
         <div class="form-footer">
-            <button class="btn btn-primary" onclick="setInitialBalance()">✅ Установить</button>
+            <button class="btn btn-primary" onclick="setInitialBalance()">✅ Пополнить</button>
             <button class="btn btn-secondary" onclick="hideBalanceForm()">❌ Отмена</button>
         </div>
     </div>
@@ -234,71 +244,72 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
     <!-- Форма создания счета -->
-<div id="accountForm" class="form-modal" style="display: none;">
-    <div class="form-header">
-        <h2>➕ Новый счет</h2>
-        <button class="close-btn" onclick="hideAccountForm()">✖</button>
-    </div>
-
-    <div class="form-body">
-        <div class="form-group">
-            <label>Название счета</label>
-            <input type="text" id="accountName" placeholder="Например: Тинькофф Дебетовая">
+    <div id="accountForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>➕ Новый счет</h2>
+            <button class="close-btn" onclick="hideAccountForm()">✖</button>
         </div>
 
-        <div class="form-group">
-            <label>Тип счета</label>
-            <select id="accountType">
-                <option value="debit">💳 Дебетовая карта</option>
-                <option value="credit">💳 Кредитная карта</option>
-                <option value="savings">🏦 Накопительный счет</option>
-                <option value="cash">💰 Наличные</option>
-                <option value="investment">📈 Инвестиции</option>
-            </select>
+        <div class="form-body">
+            <div class="form-group">
+                <label>Название счета</label>
+                <input type="text" id="accountName" placeholder="Например: Тинькофф Дебетовая">
+            </div>
+
+            <div class="form-group">
+                <label>Тип счета</label>
+                <select id="accountType">
+                    <option value="debit">💳 Дебетовая карта</option>
+                    <option value="credit">💳 Кредитная карта</option>
+                    <option value="savings">🏦 Накопительный счет</option>
+                    <option value="cash">💰 Наличные</option>
+                    <option value="investment">📈 Инвестиции</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Начальный баланс (₽)</label>
+                <input type="number" id="accountBalance" placeholder="0" step="0.01">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Начальный баланс (₽)</label>
-            <input type="number" id="accountBalance" placeholder="0" step="0.01">
-        </div>
-    </div>
-
-    <div class="form-footer">
-        <button class="btn btn-primary" onclick="saveAccount()">✅ Создать</button>
-        <button class="btn btn-secondary" onclick="hideAccountForm()">❌ Отмена</button>
-    </div>
-</div>
-
-<!-- Форма перевода между счетами -->
-<div id="transferForm" class="form-modal" style="display: none;">
-    <div class="form-header">
-        <h2>🔄 Перевод между счетами</h2>
-        <button class="close-btn" onclick="hideTransferForm()">✖</button>
-    </div>
-
-    <div class="form-body">
-        <div class="form-group">
-            <label>Откуда</label>
-            <select id="transferFrom" class="account-select"></select>
-        </div>
-
-        <div class="form-group">
-            <label>Куда</label>
-            <select id="transferTo" class="account-select"></select>
-        </div>
-
-        <div class="form-group">
-            <label>Сумма перевода</label>
-            <input type="number" id="transferAmount" placeholder="Введите сумму" step="0.01">
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="saveAccount()">✅ Создать</button>
+            <button class="btn btn-secondary" onclick="hideAccountForm()">❌ Отмена</button>
         </div>
     </div>
 
-    <div class="form-footer">
-        <button class="btn btn-primary" onclick="transferMoney()">✅ Перевести</button>
-        <button class="btn btn-secondary" onclick="hideTransferForm()">❌ Отмена</button>
+    <!-- Форма перевода между счетами -->
+    <div id="transferForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>🔄 Перевод между счетами</h2>
+            <button class="close-btn" onclick="hideTransferForm()">✖</button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-group">
+                <label>Откуда</label>
+                <select id="transferFrom" class="account-select"></select>
+            </div>
+
+            <div class="form-group">
+                <label>Куда</label>
+                <select id="transferTo" class="account-select"></select>
+            </div>
+
+            <div class="form-group">
+                <label>Сумма перевода</label>
+                <input type="number" id="transferAmount" placeholder="Введите сумму" step="0.01">
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="transferMoney()">✅ Перевести</button>
+            <button class="btn btn-secondary" onclick="hideTransferForm()">❌ Отмена</button>
+        </div>
     </div>
-</div>
+
+    <script src="script.js"></script>
 </body>
 </html>
