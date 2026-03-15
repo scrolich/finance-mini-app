@@ -1,197 +1,349 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Финансовый трекер</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 16px;
-            background: #f5f5f5;
-        }
-        .balance {
-            font-size: 48px;
-            font-weight: bold;
-            text-align: center;
-            margin: 30px 0;
-            color: #2196F3;
-        }
-        .buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        button {
-            flex: 1;
-            padding: 15px;
-            font-size: 18px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            background: #2196F3;
-            color: white;
-        }
-        button.expense {
-            background: #f44336;
-        }
-        .history {
-            background: white;
-            border-radius: 10px;
-            padding: 15px;
-        }
-        .item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .status {
-            text-align: center;
-            color: #666;
-            margin: 10px 0;
-            font-size: 14px;
-        }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="balance" id="balance">0 ₽</div>
+    <div id="app">
+        <!-- Шапка с выбором счета -->
+        <div class="header">
+            <div class="account-selector">
+                <select id="accountSelect" onchange="switchAccount()" class="account-select">
+                    <!-- Счета будут добавляться динамически -->
+                </select>
+                <button class="btn-icon" onclick="showAccountForm()" title="Добавить счет">➕</button>
+            </div>
 
-    <div class="buttons">
-        <button onclick="addMoney()">💰 Доход</button>
-        <button class="expense" onclick="spendMoney()">💸 Расход</button>
+            <div class="balance-label">Текущий баланс</div>
+            <div class="balance" id="balance">0 ₽</div>
+
+            <div class="account-stats" id="accountStats">
+                <!-- Статистика по счету -->
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-small" onclick="showBalanceForm()" style="flex: 1;">
+                    ✏️ Пополнить
+                </button>
+                <button class="btn btn-small btn-transfer" onclick="showTransferForm()" style="flex: 1;">
+                    🔄 Перевод
+                </button>
+            </div>
+        </div>
+
+        <!-- Кнопки дохода и расхода -->
+        <div class="actions">
+            <button class="btn btn-income" onclick="showForm('income')">
+                <span class="btn-emoji">💰</span>
+                <span class="btn-text">Доход</span>
+            </button>
+            <button class="btn btn-expense" onclick="showForm('expense')">
+                <span class="btn-emoji">💸</span>
+                <span class="btn-text">Расход</span>
+            </button>
+        </div>
+
+        <!-- Сводка по всем счетам -->
+        <div class="card">
+            <div class="card-title">🏦 Все счета</div>
+            <div id="accountsSummary" class="accounts-summary"></div>
+        </div>
+
+        <!-- Статистика за сегодня -->
+        <div class="card">
+            <div class="card-title">📊 Сегодня</div>
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-label">Доходы</div>
+                    <div class="stat-value income" id="todayIncome">0 ₽</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Расходы</div>
+                    <div class="stat-value expense" id="todayExpense">0 ₽</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Переключатель валют -->
+        <div style="display: flex; gap: 10px; margin-bottom: 15px; justify-content: flex-end;">
+            <button class="currency-btn active-currency" onclick="setCurrency('RUB')" id="currency-rub">🇷🇺 RUB</button>
+            <button class="currency-btn" onclick="setCurrency('USD')" id="currency-usd">🇺🇸 USD</button>
+            <button class="currency-btn" onclick="setCurrency('EUR')" id="currency-eur">🇪🇺 EUR</button>
+        </div>
+
+        <!-- Графики -->
+        <div class="card">
+            <div class="card-title">📊 Аналитика</div>
+
+            <!-- Вкладки графиков -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button class="tab-btn active" onclick="showChart('categories')" id="tab-categories">По категориям</button>
+                <button class="tab-btn" onclick="showChart('daily')" id="tab-daily">По дням</button>
+                <button class="tab-btn" onclick="showChart('balance')" id="tab-balance">Баланс</button>
+            </div>
+
+            <!-- Контейнеры для графиков -->
+            <div id="chart-categories" style="height: 250px;">
+                <canvas id="categoriesChart"></canvas>
+            </div>
+
+            <div id="chart-daily" style="height: 250px; display: none;">
+                <canvas id="dailyChart"></canvas>
+            </div>
+
+            <div id="chart-balance" style="height: 250px; display: none;">
+                <canvas id="balanceChart"></canvas>
+            </div>
+
+            <!-- Статистика -->
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--hint-color);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>💰 Всего доходов:</span>
+                    <span class="income" id="totalIncome">0 ₽</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>💸 Всего расходов:</span>
+                    <span class="expense" id="totalExpense">0 ₽</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                    <span>📊 Разница:</span>
+                    <span id="totalDiff">0 ₽</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Последние операции -->
+        <div class="card">
+            <div class="card-title">📜 Последние операции</div>
+            <div id="history" class="history-list"></div>
+        </div>
+
+        <!-- Бюджет -->
+        <div class="card">
+            <div class="card-title">🎯 Бюджет месяца</div>
+            <div class="budget-progress">
+                <div class="progress-bar" id="budgetBar" style="width: 0%"></div>
+            </div>
+            <div class="budget-stats">
+                <span id="spentAmount">0 ₽</span> / <span id="budgetAmount">0 ₽</span>
+            </div>
+            <button class="btn btn-small" onclick="showBudgetForm()">Установить бюджет</button>
+        </div>
+
+        <!-- Планы расходов -->
+        <div class="card">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>📋 Планы расходов</span>
+                <button class="btn-icon-small" onclick="showPlanForm()" title="Добавить план">➕</button>
+            </div>
+
+            <!-- Сводка по планам -->
+            <div id="plansSummary" class="plans-summary">
+                <div class="plan-stats">
+                    <div class="stat-block">
+                        <div class="stat-label">Запланировано</div>
+                        <div class="stat-value" id="totalPlanned">0 ₽</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-label">Выполнено</div>
+                        <div class="stat-value" id="totalCompleted">0 ₽</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-label">Осталось</div>
+                        <div class="stat-value" id="totalRemaining">0 ₽</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Список планов -->
+            <div id="plansList" class="plans-list"></div>
+
+            <!-- Кнопка для добавления плана -->
+            <button class="btn btn-small" onclick="showPlanForm()" style="margin-top: 10px;">
+                ➕ Добавить план
+            </button>
+        </div>
+
+        <!-- Кнопка сброса -->
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-title">⚙️ Настройки</div>
+            <button class="btn btn-small btn-danger" onclick="resetAllData()" style="background: #f44336; color: white;">
+                🗑️ Сбросить все данные
+            </button>
+            <p style="color: var(--hint-color); font-size: 12px; margin-top: 10px;">
+                Внимание! Это удалит все ваши транзакции и обнулит баланс.
+            </p>
+        </div>
     </div>
 
-    <div class="status" id="status">🔄 Загрузка...</div>
+    <!-- Форма добавления транзакции -->
+    <div id="transactionForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2 id="formTitle">💰 Добавить доход</h2>
+            <button class="close-btn" onclick="hideForm()">✖</button>
+        </div>
 
-    <div class="history" id="history"></div>
+        <div class="form-body">
+            <div class="form-group">
+                <label>Сумма (₽)</label>
+                <input type="number" id="amount" placeholder="Например: 5000" step="0.01">
+            </div>
 
-    <script>
-        let tg = Telegram.WebApp;
-        tg.expand();
+            <div class="form-group">
+                <label>Категория</label>
+                <select id="category">
+                    <optgroup label="Доходы" id="incomeCategories">
+                        <option value="salary">💼 Зарплата</option>
+                        <option value="gifts">🎁 Подарки</option>
+                        <option value="investments">📈 Инвестиции</option>
+                        <option value="freelance">💻 Фриланс</option>
+                        <option value="other">💰 Другое</option>
+                    </optgroup>
+                    <optgroup label="Расходы" id="expenseCategories" style="display: none;">
+                        <option value="food">🍔 Еда</option>
+                        <option value="housing">🏠 Жилье</option>
+                        <option value="transport">🚗 Транспорт</option>
+                        <option value="clothes">👕 Одежда</option>
+                        <option value="health">💊 Здоровье</option>
+                        <option value="entertainment">🎮 Развлечения</option>
+                        <option value="education">📚 Образование</option>
+                        <option value="pets">🐶 Животные</option>
+                        <option value="communication">📱 Связь</option>
+                        <option value="gifts_expense">🎁 Подарки</option>
+                        <option value="work">💼 Работа</option>
+                        <option value="other_expense">💰 Другое</option>
+                    </optgroup>
+                </select>
+            </div>
 
-        let balance = 0;
-        let transactions = [];
-        let userId = tg.initDataUnsafe?.user?.id || 0;
+            <div class="form-group">
+                <label>Описание (необязательно)</label>
+                <input type="text" id="description" placeholder="Что купили?">
+            </div>
 
-        // Загрузка данных при старте
-        async function loadData() {
-            document.getElementById('status').innerText = '🔄 Загрузка с сервера...';
+            <div class="form-group">
+                <label>Дата</label>
+                <input type="date" id="transactionDate">
+            </div>
+        </div>
 
-            // Запрашиваем данные у бота
-            tg.sendData(JSON.stringify({
-                action: 'load',
-                user_id: userId
-            }));
-        }
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="saveTransaction()">✅ Сохранить</button>
+            <button class="btn btn-secondary" onclick="hideForm()">❌ Отмена</button>
+        </div>
+    </div>
 
-        // Обновление экрана
-        function updateUI() {
-            document.getElementById('balance').innerText = balance.toFixed(2) + ' ₽';
+    <!-- Форма пополнения счета -->
+    <div id="balanceForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>💰 Пополнить счет</h2>
+            <button class="close-btn" onclick="hideBalanceForm()">✖</button>
+        </div>
 
-            let html = '<h3>📜 История операций</h3>';
-            if (transactions.length === 0) {
-                html += '<div class="item">Нет операций</div>';
-            } else {
-                transactions.slice(-10).reverse().forEach(t => {
-                    let sign = t.type === 'income' ? '+' : '-';
-                    let color = t.type === 'income' ? '#4CAF50' : '#f44336';
-                    let date = new Date(t.date).toLocaleString('ru', {
-                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-                    });
-                    html += `<div class="item">
-                        <span>${t.desc || 'Операция'}</span>
-                        <span>
-                            <span style="color: ${color}">${sign}${t.amount} ₽</span>
-                            <br><small>${date}</small>
-                        </span>
-                    </div>`;
-                });
-            }
-            document.getElementById('history').innerHTML = html;
-        }
+        <div class="form-body">
+            <div class="form-group">
+                <label>Сумма пополнения (₽)</label>
+                <input type="number" id="initialBalance" placeholder="Например: 10000" step="0.01">
+            </div>
+        </div>
 
-        // Сохранение на сервере
-        function saveToServer() {
-            document.getElementById('status').innerText = '🔄 Сохранение...';
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="setInitialBalance()">✅ Пополнить</button>
+            <button class="btn btn-secondary" onclick="hideBalanceForm()">❌ Отмена</button>
+        </div>
+    </div>
 
-            tg.sendData(JSON.stringify({
-                action: 'save',
-                user_id: userId,
-                balance: balance,
-                transactions: transactions
-            }));
-        }
+    <!-- Форма установки бюджета -->
+    <div id="budgetForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>🎯 Установить бюджет</h2>
+            <button class="close-btn" onclick="hideBudgetForm()">✖</button>
+        </div>
 
-        // Добавить доход
-        function addMoney() {
-            let amount = prompt('Сумма дохода:', '1000');
-            if (amount && !isNaN(amount)) {
-                amount = parseFloat(amount);
-                balance += amount;
-                transactions.push({
-                    type: 'income',
-                    amount: amount,
-                    desc: 'Доход',
-                    date: new Date().toISOString()
-                });
-                updateUI();
-                saveToServer();
-            }
-        }
+        <div class="form-body">
+            <div class="form-group">
+                <label>Месячный бюджет (₽)</label>
+                <input type="number" id="budgetInput" placeholder="Например: 50000">
+            </div>
+        </div>
 
-        // Добавить расход
-        function spendMoney() {
-            let amount = prompt('Сумма расхода:', '500');
-            if (amount && !isNaN(amount)) {
-                amount = parseFloat(amount);
-                if (amount > balance) {
-                    alert('❌ Недостаточно средств!');
-                    return;
-                }
-                balance -= amount;
-                transactions.push({
-                    type: 'expense',
-                    amount: amount,
-                    desc: 'Расход',
-                    date: new Date().toISOString()
-                });
-                updateUI();
-                saveToServer();
-            }
-        }
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="saveBudget()">✅ Сохранить</button>
+            <button class="btn btn-secondary" onclick="hideBudgetForm()">❌ Отмена</button>
+        </div>
+    </div>
 
-        // Слушаем ответ от бота
-        window.addEventListener('message', (event) => {
-            try {
-                let data = JSON.parse(event.data);
+    <!-- Форма создания счета -->
+    <div id="accountForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>➕ Новый счет</h2>
+            <button class="close-btn" onclick="hideAccountForm()">✖</button>
+        </div>
 
-                if (data.type === 'data_loaded') {
-                    // Получены данные с сервера
-                    balance = data.balance || 0;
-                    transactions = data.transactions || [];
-                    updateUI();
-                    document.getElementById('status').innerText = '✅ Данные загружены';
+        <div class="form-body">
+            <div class="form-group">
+                <label>Название счета</label>
+                <input type="text" id="accountName" placeholder="Например: Тинькофф Дебетовая">
+            </div>
 
-                    setTimeout(() => {
-                        document.getElementById('status').innerText = '🔄 Готов';
-                    }, 2000);
+            <div class="form-group">
+                <label>Тип счета</label>
+                <select id="accountType">
+                    <option value="debit">💳 Дебетовая карта</option>
+                    <option value="credit">💳 Кредитная карта</option>
+                    <option value="savings">🏦 Накопительный счет</option>
+                    <option value="cash">💰 Наличные</option>
+                    <option value="investment">📈 Инвестиции</option>
+                </select>
+            </div>
 
-                } else if (data.type === 'data_saved') {
-                    // Данные сохранены
-                    document.getElementById('status').innerText = '✅ Сохранено';
+            <div class="form-group">
+                <label>Начальный баланс (₽)</label>
+                <input type="number" id="accountBalance" placeholder="0" step="0.01">
+            </div>
+        </div>
 
-                    setTimeout(() => {
-                        document.getElementById('status').innerText = '🔄 Готов';
-                    }, 2000);
-                }
-            } catch(e) {}
-        });
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="saveAccount()">✅ Создать</button>
+            <button class="btn btn-secondary" onclick="hideAccountForm()">❌ Отмена</button>
+        </div>
+    </div>
 
-        // Старт
-        loadData();
-    </script>
+    <!-- Форма перевода между счетами -->
+    <div id="transferForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>🔄 Перевод между счетами</h2>
+            <button class="close-btn" onclick="hideTransferForm()">✖</button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-group">
+                <label>Откуда</label>
+                <select id="transferFrom" class="account-select"></select>
+            </div>
+
+            <div class="form-group">
+                <label>Куда</label>
+                <select id="transferTo" class="account-select"></select>
+            </div>
+
+            <div class="form-group">
+                <label>Сумма перевода</label>
+                <input type="number" id="transferAmount" placeholder="Введите сумму" step="0.01">
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="transferMoney()">✅ Перевести</button>
+            <button class="btn btn-secondary" onclick="hideTransferForm()">❌ Отмена</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
