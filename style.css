@@ -332,3 +332,165 @@ body {
 .form-footer .btn {
     margin: 0;
 }
+/* Селектор счетов */
+.account-selector {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.account-select {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid var(--hint-color);
+    border-radius: 12px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.account-select option {
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+
+.btn-icon {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 12px;
+    background: var(--secondary-bg-color);
+    color: var(--text-color);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    background: var(--button-color);
+    color: var(--button-text-color);
+}
+
+.btn-transfer {
+    background: var(--secondary-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--hint-color);
+}
+
+/* Сводка по счетам */
+.accounts-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.account-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: var(--bg-color);
+    border-radius: 12px;
+    border: 1px solid var(--hint-color);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.account-item:hover {
+    border-color: var(--button-color);
+    transform: translateY(-2px);
+}
+
+.account-item.active {
+    border: 2px solid var(--button-color);
+    background: rgba(64, 167, 227, 0.1);
+}
+
+.account-icon {
+    font-size: 24px;
+    margin-right: 12px;
+}
+
+.account-info {
+    flex: 1;
+}
+
+.account-name {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.account-type {
+    font-size: 12px;
+    color: var(--hint-color);
+}
+
+.account-balance {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.account-balance.positive {
+    color: #4CAF50;
+}
+
+.account-balance.negative {
+    color: #F44336;
+}
+
+.account-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: 12px;
+}
+
+.account-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid var(--hint-color);
+    border-radius: 6px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.account-actions button:hover {
+    background: var(--button-color);
+    color: var(--button-text-color);
+}
+
+/* Статистика по счету */
+.account-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--bg-color);
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.stat-block {
+    text-align: center;
+}
+
+.stat-label {
+    color: var(--hint-color);
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-weight: 600;
+}
+
+/* Цвета для разных типов счетов */
+.account-debit { border-left: 4px solid #40A7E3; }
+.account-credit { border-left: 4px solid #F44336; }
+.account-savings { border-left: 4px solid #4CAF50; }
+.account-cash { border-left: 4px solid #FF9800; }
