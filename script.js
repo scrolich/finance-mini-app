@@ -18,7 +18,8 @@ let appState = {
     ],
     transactions: [],
     budget: 0,
-    activeAccount: 'main'
+    activeAccount: 'main',
+    plans: []
 };
 
 // Переменные для графиков
@@ -1082,4 +1083,381 @@ function loadData() {
         initializeAccounts();
         updateUI();
     }
+}
+// ==================== ПЛАНЫ РАСХОДОВ ====================
+
+// Показ формы добавления плана
+function showPlanForm() {
+    document.getElementById('app').style.display = 'none';
+
+    // Создаем форму динамически, если её нет
+    let form = document.getElementById('planForm');
+    if (!form) {
+        form = createPlanForm();
+    }
+
+    form.style.display = 'block';
+
+    // Устанавливаем дату по умолчанию (завтра)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('planDate').value = tomorrow.toISOString().split('T')[0];
+}
+
+// Создание формы плана
+function createPlanForm() {
+    const form = document.createElement('div');
+    form.id = 'planForm';
+    form.className = 'form-modal';
+    form.innerHTML = `
+        <div class="form-header">
+            <h2>📋 Новый план расходов</h2>
+            <button class="close-btn" onclick="hidePlanForm()">✖</button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-group">
+                <label>Название</label>
+                <input type="text" id="planName" placeholder="Например: Продукты на неделю">
+            </div>
+
+            <div class="form-group">
+                <label>Сумма (₽)</label>
+                <input type="number" id="planAmount" placeholder="5000" step="0.01">
+            </div>
+
+            <div class="form-group">
+                <label>Категория</label>
+                <select id="planCategory">
+                    <option value="food">🍔 Еда</option>
+                    <option value="housing">🏠 Жилье</option>
+                    <option value="transport">🚗 Транспорт</option>
+                    <option value="clothes">👕 Одежда</option>
+                    <option value="health">💊 Здоровье</option>
+                    <option value="entertainment">🎮 Развлечения</option>
+                    <option value="education">📚 Образование</option>
+                    <option value="pets">🐶 Животные</option>
+                    <option value="communication">📱 Связь</option>
+                    <option value="gifts_expense">🎁 Подарки</option>
+                    <option value="other_expense">💰 Другое</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Дата</label>
+                <input type="date" id="planDate">
+            </div>
+
+            <div class="form-group">
+                <label>Повторение</label>
+                <select id="planRecurring">
+                    <option value="false">Одноразово</option>
+                    <option value="weekly">Каждую неделю</option>
+                    <option value="monthly">Каждый месяц</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Счет списания</label>
+                <select id="planAccount">
+                    ${appState.accounts.map(a =>
+                        `<option value="${a.id}">${a.icon} ${a.name}</option>`
+                    ).join('')}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="savePlan()">✅ Сохранить план</button>
+            <button class="btn btn-secondary" onclick="hidePlanForm()">❌ Отмена</button>
+        </div>
+    `;
+
+    document.body.appendChild(form);
+    return form;
+}
+
+// Скрытие формы плана
+function hidePlanForm() {
+    document.getElementById('planForm').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+}
+
+// Сохранение плана
+function savePlan() {
+    const name = document.getElementById('planName').value;
+    const amount = parseFloat(document.getElementById('planAmount').value);
+    const category = document.getElementById('planCategory').value;
+    const date = document.getElementById('planDate').value;
+    const recurring = document.getElementById('planRecurring').value;
+    const accountId = document.getElementById('planAccount').value;
+
+    if (!name) {
+        tg.showAlert('Введите название плана');
+        return;
+    }
+
+    if (isNaN(amount) || amount <= 0) {
+        tg.showAlert('Введите корректную сумму');
+        return;
+    }
+
+    const plan = {
+        id: 'plan_' + Date.now(),
+        name: name,
+        amount: amount,
+        category: category,
+        date: date,
+        completed: false,
+        recurring: recurring === 'false' ? false : recurring,
+        accountId: accountId,
+        createdAt: new Date().toISOString()
+    };
+
+    if (!appState.plans) {
+        appState.plans = [];
+    }
+
+    appState.plans.push(plan);
+    updatePlans();
+    saveData();
+    hidePlanForm();
+
+    tg.showAlert(`✅ План "${name}" добавлен`);
+}
+
+// Обновление отображения планов
+function updatePlans() {
+    if (!appState.plans) {
+        appState.plans = [];
+    }
+
+    const plansList = document.getElementById('plansList');
+    if (!plansList) return;
+
+    // Сортируем планы: сначала невыполненные, потом по дате
+    const sortedPlans = [...appState.plans].sort((a, b) => {
+        if (a.completed && !b.completed) return 1;
+        if (!a.completed && b.completed) return -1;
+        return new Date(a.date) - new Date(b.date);
+    });
+
+    plansList.innerHTML = sortedPlans.map(plan => {
+        const account = appState.accounts.find(a => a.id === plan.accountId);
+        const isOverdue = !plan.completed && new Date(plan.date) < new Date();
+        const dateStr = new Date(plan.date).toLocaleDateString('ru-RU');
+
+        return `
+            <div class="plan-item ${plan.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}">
+                <input type="checkbox" class="plan-checkbox"
+                       ${plan.completed ? 'checked' : ''}
+                       onchange="togglePlanComplete('${plan.id}', this.checked)">
+
+                <div class="plan-info">
+                    <div class="plan-name">
+                        ${plan.name}
+                        ${plan.recurring ? `<span class="plan-recurring">${plan.recurring === 'weekly' ? 'Каждую неделю' : 'Каждый месяц'}</span>` : ''}
+                    </div>
+                    <div class="plan-details">
+                        <span class="plan-amount">${formatMoney(plan.amount)}</span>
+                        <span class="plan-category">${getCategoryName(plan.category)}</span>
+                        <span class="plan-date ${isOverdue ? 'overdue' : ''}">
+                            📅 ${dateStr} ${isOverdue ? '(просрочено)' : ''}
+                        </span>
+                        ${account ? `<span>${account.icon} ${account.name}</span>` : ''}
+                    </div>
+                </div>
+
+                <div class="plan-actions">
+                    <button onclick="editPlan('${plan.id}')">✏️</button>
+                    <button onclick="deletePlan('${plan.id}')">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    updatePlansSummary();
+}
+
+// Переключение статуса плана (выполнено/не выполнено)
+function togglePlanComplete(planId, completed) {
+    const plan = appState.plans.find(p => p.id === planId);
+    if (!plan) return;
+
+    if (completed && !plan.completed) {
+        // Если отмечаем как выполненное - создаем расход
+        const account = appState.accounts.find(a => a.id === plan.accountId);
+        if (account) {
+            if (account.balance < plan.amount) {
+                tg.showAlert(`⚠️ Недостаточно средств на счете "${account.name}"`);
+                // Возвращаем чекбокс в исходное состояние
+                document.querySelector(`input[onchange*="${planId}"]`).checked = false;
+                return;
+            }
+
+            // Создаем транзакцию расхода
+            const transaction = {
+                id: Date.now(),
+                accountId: plan.accountId,
+                type: 'expense',
+                amount: plan.amount,
+                category: plan.category,
+                description: `📋 План: ${plan.name}`,
+                date: new Date().toISOString()
+            };
+
+            appState.transactions.push(transaction);
+
+            // Обновляем баланс счета
+            account.balance -= plan.amount;
+
+            // Если план повторяющийся, создаем новый на следующую дату
+            if (plan.recurring) {
+                createRecurringPlan(plan);
+            }
+
+            tg.showAlert(`✅ Расход добавлен: ${formatMoney(plan.amount)}`);
+        }
+    }
+
+    plan.completed = completed;
+    updatePlans();
+    updateAccountsSummary();
+    updateUI();
+    saveData();
+}
+
+// Создание повторяющегося плана
+function createRecurringPlan(plan) {
+    const nextDate = new Date(plan.date);
+
+    if (plan.recurring === 'weekly') {
+        nextDate.setDate(nextDate.getDate() + 7);
+    } else if (plan.recurring === 'monthly') {
+        nextDate.setMonth(nextDate.getMonth() + 1);
+    }
+
+    const newPlan = {
+        ...plan,
+        id: 'plan_' + Date.now() + '_recurring',
+        date: nextDate.toISOString().split('T')[0],
+        completed: false,
+        createdAt: new Date().toISOString()
+    };
+
+    appState.plans.push(newPlan);
+}
+
+// Обновление сводки по планам
+function updatePlansSummary() {
+    if (!appState.plans) return;
+
+    let totalPlanned = 0;
+    let totalCompleted = 0;
+
+    appState.plans.forEach(plan => {
+        if (!plan.completed) {
+            totalPlanned += plan.amount;
+        } else {
+            totalCompleted += plan.amount;
+        }
+    });
+
+    document.getElementById('totalPlanned').textContent = formatMoney(totalPlanned);
+    document.getElementById('totalCompleted').textContent = formatMoney(totalCompleted);
+    document.getElementById('totalRemaining').textContent = formatMoney(totalPlanned);
+}
+
+// Редактирование плана
+function editPlan(planId) {
+    const plan = appState.plans.find(p => p.id === planId);
+    if (!plan) return;
+
+    // Простое редактирование через prompt
+    const newName = prompt('Название плана:', plan.name);
+    if (newName) {
+        plan.name = newName;
+        updatePlans();
+        saveData();
+    }
+}
+
+// Удаление плана
+function deletePlan(planId) {
+    if (confirm('Удалить этот план?')) {
+        appState.plans = appState.plans.filter(p => p.id !== planId);
+        updatePlans();
+        saveData();
+    }
+}
+
+// Обновляем функцию загрузки данных
+function loadData() {
+    try {
+        const saved = localStorage.getItem('financeData');
+        if (saved) {
+            appState = JSON.parse(saved);
+            // Инициализируем plans если их нет
+            if (!appState.plans) {
+                appState.plans = [];
+            }
+            initializeAccounts();
+        } else {
+            appState = {
+                accounts: [],
+                transactions: [],
+                budget: 0,
+                activeAccount: null,
+                plans: []
+            };
+            initializeAccounts();
+        }
+        console.log('Загружены данные:', appState);
+        updateUI();
+    } catch (e) {
+        console.error('Ошибка загрузки:', e);
+        initializeAccounts();
+        updateUI();
+    }
+}
+
+// Обновляем функцию updateUI
+function updateUI() {
+    // Баланс
+    const activeAccount = appState.accounts.find(a => a.id === appState.activeAccount);
+    if (activeAccount) {
+        document.getElementById('balance').textContent = formatMoney(activeAccount.balance);
+    }
+
+    // Сегодняшние операции
+    const today = new Date().toDateString();
+    let todayIncome = 0;
+    let todayExpense = 0;
+
+    appState.transactions.forEach(t => {
+        const tDate = new Date(t.date).toDateString();
+        if (tDate === today) {
+            if (t.type === 'income') {
+                todayIncome += t.amount;
+            } else {
+                todayExpense += t.amount;
+            }
+        }
+    });
+
+    document.getElementById('todayIncome').textContent = formatMoney(todayIncome);
+    document.getElementById('todayExpense').textContent = formatMoney(todayExpense);
+
+    // История для активного счета
+    const accountTransactions = appState.transactions.filter(t => t.accountId === appState.activeAccount);
+    updateHistory(accountTransactions);
+
+    // Бюджет
+    updateBudgetUI();
+
+    // Графики
+    updateCharts();
+
+    // Планы
+    updatePlans();
 }

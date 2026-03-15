@@ -494,3 +494,137 @@ body {
 .account-credit { border-left: 4px solid #F44336; }
 .account-savings { border-left: 4px solid #4CAF50; }
 .account-cash { border-left: 4px solid #FF9800; }
+/* Планы расходов */
+.plans-summary {
+    margin-bottom: 15px;
+}
+
+.plan-stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    background: var(--bg-color);
+    border-radius: 12px;
+    margin-bottom: 10px;
+}
+
+.plans-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.plan-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: var(--bg-color);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--hint-color);
+    transition: all 0.2s;
+}
+
+.plan-item.completed {
+    opacity: 0.7;
+    background: rgba(76, 175, 80, 0.1);
+    border-color: #4CAF50;
+}
+
+.plan-item.overdue {
+    border-color: #F44336;
+}
+
+.plan-checkbox {
+    margin-right: 12px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    accent-color: var(--button-color);
+}
+
+.plan-info {
+    flex: 1;
+}
+
+.plan-name {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.plan-details {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--hint-color);
+}
+
+.plan-amount {
+    font-weight: 600;
+    color: #F44336;
+}
+
+.plan-category {
+    background: var(--secondary-bg-color);
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.plan-date {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.plan-date.overdue {
+    color: #F44336;
+}
+
+.plan-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: 12px;
+}
+
+.plan-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid var(--hint-color);
+    border-radius: 6px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.plan-actions button:hover {
+    background: var(--button-color);
+    color: var(--button-text-color);
+}
+
+.plan-recurring {
+    font-size: 11px;
+    padding: 2px 6px;
+    background: var(--button-color);
+    color: var(--button-text-color);
+    border-radius: 12px;
+    margin-left: 8px;
+}
+
+.btn-icon-small {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: var(--secondary-bg-color);
+    color: var(--text-color);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon-small:hover {
+    background: var(--button-color);
+    color: var(--button-text-color);
+}

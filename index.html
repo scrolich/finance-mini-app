@@ -135,6 +135,42 @@
             <button class="btn btn-small" onclick="showBudgetForm()">Установить бюджет</button>
         </div>
 
+                <!-- Планы расходов -->
+        <div class="card">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>📋 Планы расходов</span>
+                <button class="btn-icon-small" onclick="showPlanForm()" title="Добавить план">➕</button>
+            </div>
+
+            <!-- Сводка по планам -->
+            <div id="plansSummary" class="plans-summary">
+                <div class="plan-stats">
+                    <div class="stat-block">
+                        <div class="stat-label">Запланировано</div>
+                        <div class="stat-value" id="totalPlanned">0 ₽</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-label">Выполнено</div>
+                        <div class="stat-value" id="totalCompleted">0 ₽</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-label">Осталось</div>
+                        <div class="stat-value" id="totalRemaining">0 ₽</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Список планов -->
+            <div id="plansList" class="plans-list">
+                <!-- Планы будут добавляться динамически -->
+            </div>
+
+            <!-- Кнопка для добавления плана (дубль) -->
+            <button class="btn btn-small" onclick="showPlanForm()" style="margin-top: 10px;">
+                ➕ Добавить план
+            </button>
+        </div>
+
         <!-- Кнопка сброса -->
         <div class="card" style="margin-top: 20px;">
             <div class="card-title">⚙️ Настройки</div>
