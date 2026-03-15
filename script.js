@@ -66,15 +66,20 @@ function loadData() {
     }
 }
 
-// Сохраняем данные
+// Сохраняем данные и отправляем боту
 function saveData() {
     try {
         localStorage.setItem('financeData', JSON.stringify(appState));
-        tg.sendData(JSON.stringify({
-            type: 'sync',
-            balance: appState.balance,
-            transactions: appState.transactions.slice(-10)
-        }));
+
+        // Отправляем данные боту для синхронизации
+        if (tg && tg.sendData) {
+            tg.sendData(JSON.stringify({
+                type: 'sync',
+                data: appState,
+                userId: tg.initDataUnsafe?.user?.id || 'unknown'
+            }));
+            console.log('📤 Данные отправлены боту');
+        }
     } catch (e) {
         console.error('Ошибка сохранения:', e);
     }
@@ -487,19 +492,49 @@ function hideForm() {
 }
 
 // Сохранение транзакции
+// Сохранение транзакции - ИСПРАВЛЕННАЯ ВЕРСИЯ
 function saveTransaction() {
-    const amount = parseFloat(document.getElementById('amount').value);
-    const category = document.getElementById('category').value;
-    const description = document.getElementById('description').value;
-    const date = document.getElementById('transactionDate').value;
+    console.log('saveTransaction вызвана');
+
+    // Получаем элементы формы
+    const amountInput = document.getElementById('amount');
+    const categorySelect = document.getElementById('category');
+    const descriptionInput = document.getElementById('description');
+    const dateInput = document.getElementById('transactionDate');
+
+    if (!amountInput || !categorySelect) {
+        console.error('Элементы формы не найдены');
+        tg.showAlert('Ошибка: форма не загружена');
+        return;
+    }
+
+    const amount = parseFloat(amountInput.value);
+    const category = categorySelect.value;
+    const description = descriptionInput ? descriptionInput.value : '';
+    const date = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+
+    console.log('Сумма:', amount, 'Категория:', category);
 
     if (isNaN(amount) || amount <= 0) {
         tg.showAlert('Введите корректную сумму');
         return;
     }
 
+    const activeAccount = appState.accounts.find(a => a.id === appState.activeAccount);
+    if (!activeAccount) {
+        tg.showAlert('Ошибка: выберите счет');
+        return;
+    }
+
+    // Для расхода проверяем достаточно ли средств
+    if (currentType === 'expense' && activeAccount.balance < amount) {
+        tg.showAlert(`❌ Недостаточно средств на счете "${activeAccount.name}"`);
+        return;
+    }
+
     const transaction = {
         id: Date.now(),
+        accountId: appState.activeAccount,
         type: currentType,
         amount: amount,
         category: category,
@@ -509,15 +544,26 @@ function saveTransaction() {
 
     appState.transactions.push(transaction);
 
+    // Обновляем баланс счета
     if (currentType === 'income') {
-        appState.balance += amount;
+        activeAccount.balance += amount;
     } else {
-        appState.balance -= amount;
+        activeAccount.balance -= amount;
     }
 
+    // Обновляем интерфейс
+    updateAccountSelector();
+    updateAccountsSummary();
     updateUI();
     saveData();
+
+    // Скрываем форму
     hideForm();
+
+    // Показываем сообщение
+    tg.showAlert(`✅ ${currentType === 'income' ? 'Доход' : 'Расход'} добавлен: ${formatMoney(amount)}`);
+
+    console.log('Транзакция сохранена');
 }
 
 // Показ формы баланса
@@ -533,33 +579,51 @@ function hideBalanceForm() {
     document.getElementById('app').style.display = 'block';
 }
 
-// Установка начального баланса
+// Установка начального баланса (пополнение) - ИСПРАВЛЕННАЯ ВЕРСИЯ
 function setInitialBalance() {
-    const balance = parseFloat(document.getElementById('initialBalance').value);
+    console.log('setInitialBalance вызвана');
+
+    const balanceInput = document.getElementById('initialBalance');
+    if (!balanceInput) {
+        console.error('Поле initialBalance не найдено');
+        return;
+    }
+
+    const balance = parseFloat(balanceInput.value);
 
     if (isNaN(balance) || balance < 0) {
         tg.showAlert('Введите корректную сумму');
         return;
     }
 
-    appState.balance = balance;
+    const account = appState.accounts.find(a => a.id === appState.activeAccount);
+    if (!account) {
+        tg.showAlert('Ошибка: выберите счет');
+        return;
+    }
 
-    if (balance > 0) {
+    const oldBalance = account.balance;
+    account.balance = balance;
+
+    if (balance > oldBalance) {
         appState.transactions.push({
             id: Date.now(),
+            accountId: appState.activeAccount,
             type: 'income',
-            amount: balance,
+            amount: balance - oldBalance,
             category: 'initial',
-            description: 'Начальный баланс',
+            description: 'Пополнение счета',
             date: new Date().toISOString()
         });
     }
 
+    updateAccountSelector();
+    updateAccountsSummary();
     updateUI();
     saveData();
     hideBalanceForm();
 
-    tg.showAlert(`✅ Баланс установлен: ${formatMoney(balance)}`);
+    tg.showAlert(`✅ Счет пополнен: ${formatMoney(balance)}`);
 }
 
 // Показ формы бюджета
@@ -1461,3 +1525,40 @@ function updateUI() {
     // Планы
     updatePlans();
 }
+// Получение данных от бота при запуске
+window.addEventListener('load', function() {
+    // Если есть данные от бота (при первом запуске)
+    if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe) {
+        console.log('Telegram WebApp инициализирован');
+
+        // Запрашиваем данные у бота
+        tg.sendData(JSON.stringify({
+            type: 'getData',
+            userId: tg.initDataUnsafe?.user?.id
+        }));
+    }
+});
+// Обработка данных от бота
+window.addEventListener('message', function(event) {
+    try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'sync' && data.data) {
+            console.log('📥 Получены данные от бота');
+
+            // Обновляем локальные данные
+            appState = data.data;
+
+            // Инициализируем
+            if (!appState.plans) appState.plans = [];
+            initializeAccounts();
+            updateUI();
+
+            // Сохраняем локально
+            localStorage.setItem('financeData', JSON.stringify(appState));
+
+            tg.showAlert('✅ Данные синхронизированы');
+        }
+    } catch (e) {
+        console.error('Ошибка обработки сообщения:', e);
+    }
+});
