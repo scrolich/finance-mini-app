@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Финансы</title>
+    <title>Финансовый трекер</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
@@ -37,15 +37,10 @@
         button.expense {
             background: #f44336;
         }
-        button.sync {
-            background: #4CAF50;
-            margin-bottom: 10px;
-        }
         .history {
             background: white;
             border-radius: 10px;
             padding: 15px;
-            margin-top: 20px;
         }
         .item {
             display: flex;
@@ -56,15 +51,8 @@
         .status {
             text-align: center;
             color: #666;
-            margin-top: 10px;
+            margin: 10px 0;
             font-size: 14px;
-            font-weight: bold;
-        }
-        .sync-status {
-            text-align: center;
-            color: #4CAF50;
-            margin: 5px 0;
-            font-size: 12px;
         }
     </style>
 </head>
@@ -76,11 +64,9 @@
         <button class="expense" onclick="spendMoney()">💸 Расход</button>
     </div>
 
-    <button class="sync" onclick="forceSync()">🔄 Принудительная синхронизация</button>
-    <div class="sync-status" id="syncStatus"></div>
+    <div class="status" id="status">🔄 Загрузка...</div>
 
     <div class="history" id="history"></div>
-    <div class="status" id="status">Готов</div>
 
     <script>
         let tg = Telegram.WebApp;
@@ -88,85 +74,54 @@
 
         let balance = 0;
         let transactions = [];
-        let userId = tg.initDataUnsafe?.user?.id || 'unknown';
-        let syncInProgress = false;
+        let userId = tg.initDataUnsafe?.user?.id || 0;
 
-        // Загрузка при старте
-        function loadData() {
-            let saved = localStorage.getItem('finance_' + userId);
-            if (saved) {
-                let data = JSON.parse(saved);
-                balance = data.balance || 0;
-                transactions = data.transactions || [];
-                updateUI();
-                document.getElementById('status').innerText = '📦 Загружено локально';
-            } else {
-                // Если нет локальных данных, запрашиваем с сервера
-                requestFromServer();
-            }
-        }
+        // Загрузка данных при старте
+        async function loadData() {
+            document.getElementById('status').innerText = '🔄 Загрузка с сервера...';
 
-        // Запрос данных с сервера
-        function requestFromServer() {
-            document.getElementById('syncStatus').innerText = '🔄 Запрос данных...';
+            // Запрашиваем данные у бота
             tg.sendData(JSON.stringify({
                 action: 'load',
-                userId: userId
+                user_id: userId
             }));
-        }
-
-        // Отправка данных на сервер
-        function sendToServer() {
-            if (syncInProgress) return;
-
-            syncInProgress = true;
-            document.getElementById('syncStatus').innerText = '🔄 Сохранение...';
-
-            tg.sendData(JSON.stringify({
-                action: 'save',
-                userId: userId,
-                balance: balance,
-                transactions: transactions
-            }));
-
-            // Таймаут для сброса статуса
-            setTimeout(() => {
-                syncInProgress = false;
-                if (document.getElementById('syncStatus').innerText.includes('🔄')) {
-                    document.getElementById('syncStatus').innerText = '';
-                }
-            }, 2000);
-        }
-
-        // Принудительная синхронизация
-        function forceSync() {
-            requestFromServer();
         }
 
         // Обновление экрана
         function updateUI() {
             document.getElementById('balance').innerText = balance.toFixed(2) + ' ₽';
 
-            let html = '<h3>История</h3>';
+            let html = '<h3>📜 История операций</h3>';
             if (transactions.length === 0) {
                 html += '<div class="item">Нет операций</div>';
             } else {
                 transactions.slice(-10).reverse().forEach(t => {
                     let sign = t.type === 'income' ? '+' : '-';
                     let color = t.type === 'income' ? '#4CAF50' : '#f44336';
+                    let date = new Date(t.date).toLocaleString('ru', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                    });
                     html += `<div class="item">
                         <span>${t.desc || 'Операция'}</span>
-                        <span style="color: ${color}">${sign}${t.amount} ₽</span>
+                        <span>
+                            <span style="color: ${color}">${sign}${t.amount} ₽</span>
+                            <br><small>${date}</small>
+                        </span>
                     </div>`;
                 });
             }
             document.getElementById('history').innerHTML = html;
+        }
 
-            // Сохраняем локально
-            localStorage.setItem('finance_' + userId, JSON.stringify({
+        // Сохранение на сервере
+        function saveToServer() {
+            document.getElementById('status').innerText = '🔄 Сохранение...';
+
+            tg.sendData(JSON.stringify({
+                action: 'save',
+                user_id: userId,
                 balance: balance,
-                transactions: transactions,
-                lastUpdate: Date.now()
+                transactions: transactions
             }));
         }
 
@@ -183,8 +138,7 @@
                     date: new Date().toISOString()
                 });
                 updateUI();
-                sendToServer();
-                document.getElementById('status').innerText = '✅ Добавлено';
+                saveToServer();
             }
         }
 
@@ -194,7 +148,7 @@
             if (amount && !isNaN(amount)) {
                 amount = parseFloat(amount);
                 if (amount > balance) {
-                    alert('Недостаточно средств!');
+                    alert('❌ Недостаточно средств!');
                     return;
                 }
                 balance -= amount;
@@ -205,42 +159,36 @@
                     date: new Date().toISOString()
                 });
                 updateUI();
-                sendToServer();
-                document.getElementById('status').innerText = '✅ Списано';
+                saveToServer();
             }
         }
 
-        // Слушаем сообщения от бота
+        // Слушаем ответ от бота
         window.addEventListener('message', (event) => {
             try {
                 let data = JSON.parse(event.data);
-                console.log('Получено от бота:', data);
 
-                if (data.action === 'sync') {
+                if (data.type === 'data_loaded') {
                     // Получены данные с сервера
-                    if (data.balance !== undefined) {
-                        balance = data.balance;
-                        transactions = data.transactions || [];
-                        updateUI();
-                        document.getElementById('syncStatus').innerText = '✅ Данные загружены с сервера';
-                        document.getElementById('status').innerText = '📦 Серверные данные';
+                    balance = data.balance || 0;
+                    transactions = data.transactions || [];
+                    updateUI();
+                    document.getElementById('status').innerText = '✅ Данные загружены';
 
-                        setTimeout(() => {
-                            document.getElementById('syncStatus').innerText = '';
-                        }, 3000);
-                    }
+                    setTimeout(() => {
+                        document.getElementById('status').innerText = '🔄 Готов';
+                    }, 2000);
+
+                } else if (data.type === 'data_saved') {
+                    // Данные сохранены
+                    document.getElementById('status').innerText = '✅ Сохранено';
+
+                    setTimeout(() => {
+                        document.getElementById('status').innerText = '🔄 Готов';
+                    }, 2000);
                 }
-            } catch(e) {
-                console.log('Ошибка парсинга:', e);
-            }
+            } catch(e) {}
         });
-
-        // Периодическая синхронизация (каждые 10 секунд)
-        setInterval(() => {
-            if (transactions.length > 0) {
-                requestFromServer();
-            }
-        }, 10000);
 
         // Старт
         loadData();
