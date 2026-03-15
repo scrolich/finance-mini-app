@@ -2,350 +2,210 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Финансовый трекер</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+            padding: 16px;
+        }
+        .card {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .balance {
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--tg-theme-button-color, #40a7e3);
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        button {
+            flex: 1;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            background: var(--tg-theme-button-color, #40a7e3);
+            color: var(--tg-theme-button-text-color, #fff);
+        }
+        button.secondary {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            color: var(--tg-theme-text-color, #000);
+        }
+        .form-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--tg-theme-bg-color, #fff);
+            padding: 20px;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            border-radius: 12px;
+            font-size: 16px;
+        }
+    </style>
 </head>
 <body>
     <div id="app">
-        <!-- Шапка с выбором счета -->
-        <div class="header">
-            <div class="account-selector">
-                <select id="accountSelect" onchange="switchAccount()" class="account-select">
-                    <!-- Счета будут добавляться динамически -->
-                </select>
-                <button class="btn-icon" onclick="showAccountForm()" title="Добавить счет">➕</button>
-            </div>
+        <div class="balance" id="balance">0 ₽</div>
 
-            <div class="balance-label">Текущий баланс</div>
-            <div class="balance" id="balance">0 ₽</div>
-
-            <div class="account-stats" id="accountStats">
-                <!-- Статистика по счету -->
-            </div>
-
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn btn-small" onclick="showBalanceForm()" style="flex: 1;">
-                    ✏️ Пополнить
-                </button>
-                <button class="btn btn-small btn-transfer" onclick="showTransferForm()" style="flex: 1;">
-                    🔄 Перевод
-                </button>
-            </div>
-        </div>
-
-        <!-- КНОПКИ ДОХОДА И РАСХОДА - ВОЗВРАЩАЕМ! -->
         <div class="actions">
-            <button class="btn btn-income" onclick="showForm('income')">
-                <span class="btn-emoji">💰</span>
-                <span class="btn-text">Доход</span>
-            </button>
-            <button class="btn btn-expense" onclick="showForm('expense')">
-                <span class="btn-emoji">💸</span>
-                <span class="btn-text">Расход</span>
-            </button>
+            <button onclick="showForm('income')">💰 Доход</button>
+            <button class="secondary" onclick="showForm('expense')">💸 Расход</button>
         </div>
 
-        <!-- Сводка по всем счетам -->
         <div class="card">
-            <div class="card-title">🏦 Все счета</div>
-            <div id="accountsSummary" class="accounts-summary"></div>
-        </div>
-
-        <!-- Статистика за сегодня -->
-        <div class="card">
-            <div class="card-title">📊 Сегодня</div>
-            <div class="stats-row">
-                <div class="stat-item">
-                    <div class="stat-label">Доходы</div>
-                    <div class="stat-value income" id="todayIncome">0 ₽</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Расходы</div>
-                    <div class="stat-value expense" id="todayExpense">0 ₽</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Переключатель валют -->
-        <div style="display: flex; gap: 10px; margin-bottom: 15px; justify-content: flex-end;">
-            <button class="currency-btn active-currency" onclick="setCurrency('RUB')" id="currency-rub">🇷🇺 RUB</button>
-            <button class="currency-btn" onclick="setCurrency('USD')" id="currency-usd">🇺🇸 USD</button>
-            <button class="currency-btn" onclick="setCurrency('EUR')" id="currency-eur">🇪🇺 EUR</button>
-        </div>
-
-        <!-- Графики -->
-        <div class="card">
-            <div class="card-title">📊 Аналитика</div>
-
-            <!-- Вкладки графиков -->
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <button class="tab-btn active" onclick="showChart('categories')" id="tab-categories">По категориям</button>
-                <button class="tab-btn" onclick="showChart('daily')" id="tab-daily">По дням</button>
-                <button class="tab-btn" onclick="showChart('balance')" id="tab-balance">Баланс</button>
-            </div>
-
-            <!-- Контейнеры для графиков -->
-            <div id="chart-categories" style="height: 250px;">
-                <canvas id="categoriesChart"></canvas>
-            </div>
-
-            <div id="chart-daily" style="height: 250px; display: none;">
-                <canvas id="dailyChart"></canvas>
-            </div>
-
-            <div id="chart-balance" style="height: 250px; display: none;">
-                <canvas id="balanceChart"></canvas>
-            </div>
-
-            <!-- Статистика -->
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--hint-color);">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span>💰 Всего доходов:</span>
-                    <span class="income" id="totalIncome">0 ₽</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span>💸 Всего расходов:</span>
-                    <span class="expense" id="totalExpense">0 ₽</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                    <span>📊 Разница:</span>
-                    <span id="totalDiff">0 ₽</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Последние операции -->
-        <div class="card">
-            <div class="card-title">📜 Последние операции</div>
-            <div id="history" class="history-list"></div>
-        </div>
-
-        <!-- Бюджет -->
-        <div class="card">
-            <div class="card-title">🎯 Бюджет месяца</div>
-            <div class="budget-progress">
-                <div class="progress-bar" id="budgetBar" style="width: 0%"></div>
-            </div>
-            <div class="budget-stats">
-                <span id="spentAmount">0 ₽</span> / <span id="budgetAmount">0 ₽</span>
-            </div>
-            <button class="btn btn-small" onclick="showBudgetForm()">Установить бюджет</button>
-        </div>
-
-                <!-- Планы расходов -->
-        <div class="card">
-            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
-                <span>📋 Планы расходов</span>
-                <button class="btn-icon-small" onclick="showPlanForm()" title="Добавить план">➕</button>
-            </div>
-
-            <!-- Сводка по планам -->
-            <div id="plansSummary" class="plans-summary">
-                <div class="plan-stats">
-                    <div class="stat-block">
-                        <div class="stat-label">Запланировано</div>
-                        <div class="stat-value" id="totalPlanned">0 ₽</div>
-                    </div>
-                    <div class="stat-block">
-                        <div class="stat-label">Выполнено</div>
-                        <div class="stat-value" id="totalCompleted">0 ₽</div>
-                    </div>
-                    <div class="stat-block">
-                        <div class="stat-label">Осталось</div>
-                        <div class="stat-value" id="totalRemaining">0 ₽</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Список планов -->
-            <div id="plansList" class="plans-list">
-                <!-- Планы будут добавляться динамически -->
-            </div>
-
-            <!-- Кнопка для добавления плана (дубль) -->
-            <button class="btn btn-small" onclick="showPlanForm()" style="margin-top: 10px;">
-                ➕ Добавить план
-            </button>
-        </div>
-
-        <!-- Кнопка сброса -->
-        <div class="card" style="margin-top: 20px;">
-            <div class="card-title">⚙️ Настройки</div>
-            <button class="btn btn-small btn-danger" onclick="resetAllData()" style="background: #f44336; color: white;">
-                🗑️ Сбросить все данные
-            </button>
-            <p style="color: var(--hint-color); font-size: 12px; margin-top: 10px;">
-                Внимание! Это удалит все ваши транзакции и обнулит баланс.
-            </p>
+            <h3>📊 Сегодня</h3>
+            <div id="todayStats">Доходы: 0 ₽ | Расходы: 0 ₽</div>
         </div>
     </div>
 
-    <!-- Форма добавления транзакции -->
+    <!-- Форма транзакции -->
     <div id="transactionForm" class="form-modal" style="display: none;">
-        <div class="form-header">
-            <h2 id="formTitle">💰 Добавить доход</h2>
-            <button class="close-btn" onclick="hideForm()">✖</button>
+        <h2 id="formTitle">💰 Добавить</h2>
+
+        <div class="form-group">
+            <input type="number" id="amount" placeholder="Сумма" step="0.01">
         </div>
 
-        <div class="form-body">
-            <div class="form-group">
-                <label>Сумма (₽)</label>
-                <input type="number" id="amount" placeholder="Например: 5000" step="0.01">
-            </div>
-
-            <div class="form-group">
-                <label>Категория</label>
-                <select id="category">
-                    <optgroup label="Доходы" id="incomeCategories">
-                        <option value="salary">💼 Зарплата</option>
-                        <option value="gifts">🎁 Подарки</option>
-                        <option value="investments">📈 Инвестиции</option>
-                        <option value="freelance">💻 Фриланс</option>
-                        <option value="other">💰 Другое</option>
-                    </optgroup>
-                    <optgroup label="Расходы" id="expenseCategories" style="display: none;">
-                        <option value="food">🍔 Еда</option>
-                        <option value="housing">🏠 Жилье</option>
-                        <option value="transport">🚗 Транспорт</option>
-                        <option value="clothes">👕 Одежда</option>
-                        <option value="health">💊 Здоровье</option>
-                        <option value="entertainment">🎮 Развлечения</option>
-                        <option value="education">📚 Образование</option>
-                        <option value="pets">🐶 Животные</option>
-                        <option value="communication">📱 Связь</option>
-                        <option value="gifts_expense">🎁 Подарки</option>
-                        <option value="work">💼 Работа</option>
-                        <option value="other_expense">💰 Другое</option>
-                    </optgroup>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Описание (необязательно)</label>
-                <input type="text" id="description" placeholder="Что купили?">
-            </div>
-
-            <div class="form-group">
-                <label>Дата</label>
-                <input type="date" id="transactionDate">
-            </div>
+        <div class="form-group">
+            <select id="category">
+                <option value="food">🍔 Еда</option>
+                <option value="transport">🚗 Транспорт</option>
+                <option value="entertainment">🎮 Развлечения</option>
+                <option value="other">💰 Другое</option>
+            </select>
         </div>
 
-        <div class="form-footer">
-            <button type="button" class="btn btn-primary" onclick="saveTransaction()">✅ Сохранить</button>
-            <button type="button" class="btn btn-secondary" onclick="hideForm()">❌ Отмена</button>
+        <div class="form-group">
+            <input type="text" id="description" placeholder="Описание">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button onclick="saveTransaction()" style="flex: 2;">✅ Сохранить</button>
+            <button onclick="hideForm()" class="secondary" style="flex: 1;">❌</button>
         </div>
     </div>
 
-    <!-- Форма пополнения счета -->
-    <div id="balanceForm" class="form-modal" style="display: none;">
-        <div class="form-header">
-            <h2>💰 Пополнить счет</h2>
-            <button class="close-btn" onclick="hideBalanceForm()">✖</button>
-        </div>
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
 
-        <div class="form-body">
-            <div class="form-group">
-                <label>Сумма пополнения (₽)</label>
-                <input type="number" id="initialBalance" placeholder="Например: 10000" step="0.01">
-            </div>
-        </div>
+        let balance = 0;
+        let transactions = [];
+        let currentType = 'income';
 
-        <div class="form-footer">
-            <button type="button" class="btn btn-primary" onclick="setInitialBalance()">✅ Пополнить</button>
-            <button type="button" class="btn btn-secondary" onclick="hideBalanceForm()">❌ Отмена</button>
-        </div>
-    </div>
+        function formatMoney(amount) {
+            return amount.toFixed(2) + ' ₽';
+        }
 
-    <!-- Форма установки бюджета -->
-    <div id="budgetForm" class="form-modal" style="display: none;">
-        <div class="form-header">
-            <h2>🎯 Установить бюджет</h2>
-            <button class="close-btn" onclick="hideBudgetForm()">✖</button>
-        </div>
+        function updateUI() {
+            document.getElementById('balance').textContent = formatMoney(balance);
 
-        <div class="form-body">
-            <div class="form-group">
-                <label>Месячный бюджет (₽)</label>
-                <input type="number" id="budgetInput" placeholder="Например: 50000">
-            </div>
-        </div>
+            let today = new Date().toDateString();
+            let todayIncome = 0;
+            let todayExpense = 0;
 
-        <div class="form-footer">
-            <button class="btn btn-primary" onclick="saveBudget()">✅ Сохранить</button>
-            <button class="btn btn-secondary" onclick="hideBudgetForm()">❌ Отмена</button>
-        </div>
-    </div>
+            transactions.forEach(t => {
+                if (new Date(t.date).toDateString() === today) {
+                    if (t.type === 'income') todayIncome += t.amount;
+                    else todayExpense += t.amount;
+                }
+            });
 
-    <!-- Форма создания счета -->
-    <div id="accountForm" class="form-modal" style="display: none;">
-        <div class="form-header">
-            <h2>➕ Новый счет</h2>
-            <button class="close-btn" onclick="hideAccountForm()">✖</button>
-        </div>
+            document.getElementById('todayStats').innerHTML =
+                `Доходы: ${formatMoney(todayIncome)} | Расходы: ${formatMoney(todayExpense)}`;
+        }
 
-        <div class="form-body">
-            <div class="form-group">
-                <label>Название счета</label>
-                <input type="text" id="accountName" placeholder="Например: Тинькофф Дебетовая">
-            </div>
+        function showForm(type) {
+            currentType = type;
+            document.getElementById('formTitle').textContent =
+                type === 'income' ? '💰 Добавить доход' : '💸 Добавить расход';
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('transactionForm').style.display = 'block';
+        }
 
-            <div class="form-group">
-                <label>Тип счета</label>
-                <select id="accountType">
-                    <option value="debit">💳 Дебетовая карта</option>
-                    <option value="credit">💳 Кредитная карта</option>
-                    <option value="savings">🏦 Накопительный счет</option>
-                    <option value="cash">💰 Наличные</option>
-                    <option value="investment">📈 Инвестиции</option>
-                </select>
-            </div>
+        function hideForm() {
+            document.getElementById('transactionForm').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            document.getElementById('amount').value = '';
+        }
 
-            <div class="form-group">
-                <label>Начальный баланс (₽)</label>
-                <input type="number" id="accountBalance" placeholder="0" step="0.01">
-            </div>
-        </div>
+        function saveTransaction() {
+            let amount = parseFloat(document.getElementById('amount').value);
+            let category = document.getElementById('category').value;
+            let description = document.getElementById('description').value;
 
-        <div class="form-footer">
-            <button class="btn btn-primary" onclick="saveAccount()">✅ Создать</button>
-            <button class="btn btn-secondary" onclick="hideAccountForm()">❌ Отмена</button>
-        </div>
-    </div>
+            if (isNaN(amount) || amount <= 0) {
+                tg.showAlert('Введите сумму');
+                return;
+            }
 
-    <!-- Форма перевода между счетами -->
-    <div id="transferForm" class="form-modal" style="display: none;">
-        <div class="form-header">
-            <h2>🔄 Перевод между счетами</h2>
-            <button class="close-btn" onclick="hideTransferForm()">✖</button>
-        </div>
+            let transaction = {
+                id: Date.now(),
+                type: currentType,
+                amount: amount,
+                category: category,
+                description: description,
+                date: new Date().toISOString()
+            };
 
-        <div class="form-body">
-            <div class="form-group">
-                <label>Откуда</label>
-                <select id="transferFrom" class="account-select"></select>
-            </div>
+            transactions.push(transaction);
 
-            <div class="form-group">
-                <label>Куда</label>
-                <select id="transferTo" class="account-select"></select>
-            </div>
+            if (currentType === 'income') {
+                balance += amount;
+            } else {
+                balance -= amount;
+            }
 
-            <div class="form-group">
-                <label>Сумма перевода</label>
-                <input type="number" id="transferAmount" placeholder="Введите сумму" step="0.01">
-            </div>
-        </div>
+            localStorage.setItem('financeData', JSON.stringify({
+                balance: balance,
+                transactions: transactions
+            }));
 
-        <div class="form-footer">
-            <button class="btn btn-primary" onclick="transferMoney()">✅ Перевести</button>
-            <button class="btn btn-secondary" onclick="hideTransferForm()">❌ Отмена</button>
-        </div>
-    </div>
+            updateUI();
+            hideForm();
+            tg.showAlert('✅ Готово!');
+        }
 
-    <script src="script.js"></script>
+        // Загрузка данных
+        try {
+            let saved = localStorage.getItem('financeData');
+            if (saved) {
+                let data = JSON.parse(saved);
+                balance = data.balance || 0;
+                transactions = data.transactions || [];
+            }
+        } catch (e) {
+            console.log('Ошибка загрузки');
+        }
+
+        updateUI();
+    </script>
 </body>
 </html>
