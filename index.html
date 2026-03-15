@@ -13,9 +13,14 @@
         <div class="header">
             <div class="balance-label">Текущий баланс</div>
             <div class="balance" id="balance">0 ₽</div>
+            <!-- Добавляем кнопку установки баланса -->
+            <button class="btn btn-small" onclick="showBalanceForm()" style="margin-top: 10px;">
+                ✏️ Установить начальный баланс
+            </button>
         </div>
 
         <!-- Кнопки действий -->
+
         <div class="actions">
             <button class="btn btn-income" onclick="showForm('income')">
                 <span class="btn-emoji">💰</span>
@@ -139,5 +144,27 @@
     </div>
 
     <script src="script.js"></script>
+        <!-- Форма установки начального баланса -->
+    <div id="balanceForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>💰 Установить начальный баланс</h2>
+            <button class="close-btn" onclick="hideBalanceForm()">✖</button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-group">
+                <label>Текущая сумма на счету (₽)</label>
+                <input type="number" id="initialBalance" placeholder="Например: 100000" step="0.01">
+            </div>
+            <p style="color: var(--hint-color); font-size: 12px; margin-top: 5px;">
+                ℹ️ Эта сумма будет установлена как ваш текущий баланс
+            </p>
+        </div>
+
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="setInitialBalance()">✅ Установить</button>
+            <button class="btn btn-secondary" onclick="hideBalanceForm()">❌ Отмена</button>
+        </div>
+    </div>
 </body>
 </html>

@@ -14,15 +14,33 @@ let appState = {
 };
 
 // Загружаем сохраненные данные
+// Загружаем сохраненные данные
 function loadData() {
     try {
         const saved = localStorage.getItem('financeData');
         if (saved) {
             appState = JSON.parse(saved);
-            updateUI();
+        } else {
+            // Новый пользователь - начинаем с нуля
+            appState = {
+                balance: 0,
+                transactions: [],
+                budget: 0,
+                todayIncome: 0,
+                todayExpense: 0
+            };
         }
+        updateUI();
     } catch (e) {
         console.error('Ошибка загрузки:', e);
+        // Если ошибка - создаем чистый стейт
+        appState = {
+            balance: 0,
+            transactions: [],
+            budget: 0,
+            todayIncome: 0,
+            todayExpense: 0
+        };
     }
 }
 
@@ -233,7 +251,49 @@ function saveTransaction() {
     addTransaction(currentType, amount, category, description, date);
     hideForm();
 }
+// Показ формы установки баланса
+function showBalanceForm() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('balanceForm').style.display = 'block';
+    document.getElementById('initialBalance').value = appState.balance || 0;
+}
 
+// Скрытие формы баланса
+function hideBalanceForm() {
+    document.getElementById('balanceForm').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+}
+
+// Установка начального баланса
+function setInitialBalance() {
+    const balance = parseFloat(document.getElementById('initialBalance').value);
+
+    if (isNaN(balance) || balance < 0) {
+        tg.showAlert('Введите корректную сумму');
+        return;
+    }
+
+    // Устанавливаем баланс
+    appState.balance = balance;
+
+    // Если баланс > 0, добавляем транзакцию для истории
+    if (balance > 0) {
+        appState.transactions.push({
+            id: Date.now(),
+            type: 'income',
+            amount: balance,
+            category: 'initial',
+            description: 'Начальный баланс',
+            date: new Date().toISOString()
+        });
+    }
+
+    updateUI();
+    saveData();
+    hideBalanceForm();
+
+    tg.showAlert(`✅ Баланс установлен: ${formatMoney(balance)}`);
+}
 // Показ формы бюджета
 function showBudgetForm() {
     document.getElementById('app').style.display = 'none';
@@ -268,10 +328,5 @@ function saveBudget() {
 document.addEventListener('DOMContentLoaded', () => {
     loadData();
 
-    // Добавляем тестовые данные если пусто
-    if (appState.transactions.length === 0) {
-        addTransaction('income', 50000, 'salary', 'Зарплата', new Date().toISOString());
-        addTransaction('expense', 350, 'food', 'Обед', new Date().toISOString());
-        addTransaction('expense', 1200, 'transport', 'Такси', new Date().toISOString());
-    }
+
 });

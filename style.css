@@ -289,3 +289,17 @@ body {
     padding: 40px;
     color: var(--hint-color);
 }
+.btn-small {
+    padding: 12px;
+    font-size: 14px;
+    background: var(--secondary-bg-color);
+    color: var(--text-color);
+    margin-top: 12px;
+    width: auto;
+    display: inline-block;
+    border: 1px solid var(--hint-color);
+}
+
+.btn-small:hover {
+    opacity: 0.9;
+}
