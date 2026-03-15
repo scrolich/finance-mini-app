@@ -2,315 +2,170 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Финансовый трекер</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Финансы</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--tg-theme-bg-color, #fff);
-            color: var(--tg-theme-text-color, #000);
+            margin: 0;
             padding: 16px;
-        }
-        .card {
-            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
+            background: #f5f5f5;
         }
         .balance {
             font-size: 48px;
             font-weight: bold;
             text-align: center;
-            margin: 20px 0;
-            color: var(--tg-theme-button-color, #40a7e3);
+            margin: 30px 0;
+            color: #2196F3;
         }
-        .actions {
+        .buttons {
             display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
+            gap: 10px;
+            margin-bottom: 20px;
         }
         button {
             flex: 1;
+            padding: 15px;
+            font-size: 18px;
             border: none;
-            border-radius: 12px;
-            padding: 16px;
-            font-size: 16px;
-            font-weight: 500;
+            border-radius: 10px;
             cursor: pointer;
-            background: var(--tg-theme-button-color, #40a7e3);
-            color: var(--tg-theme-button-text-color, #fff);
+            background: #2196F3;
+            color: white;
         }
-        button.secondary {
-            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            color: var(--tg-theme-text-color, #000);
+        button.expense {
+            background: #f44336;
         }
-        .form-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--tg-theme-bg-color, #fff);
-            padding: 20px;
-            z-index: 1000;
-            overflow-y: auto;
+        .history {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
         }
-        .form-group {
-            margin-bottom: 20px;
+        .item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
         }
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 14px;
-            border: 1px solid var(--tg-theme-hint-color, #ccc);
-            border-radius: 12px;
-            font-size: 16px;
-        }
-        .sync-status {
+        .status {
             text-align: center;
-            font-size: 12px;
-            color: var(--tg-theme-hint-color, #999);
+            color: #666;
             margin-top: 10px;
-            padding: 5px;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
-    <div id="app">
-        <div class="balance" id="balance">0 ₽</div>
+    <div class="balance" id="balance">0 ₽</div>
 
-        <div class="actions">
-            <button onclick="showForm('income')">💰 Доход</button>
-            <button class="secondary" onclick="showForm('expense')">💸 Расход</button>
-        </div>
-
-        <div class="card">
-            <h3>📊 Сегодня</h3>
-            <div id="todayStats">Доходы: 0 ₽ | Расходы: 0 ₽</div>
-        </div>
-
-        <!-- Статус синхронизации (автоматический) -->
-        <div class="sync-status" id="syncStatus">🔄 Загрузка...</div>
+    <div class="buttons">
+        <button onclick="addMoney()">💰 Доход</button>
+        <button class="expense" onclick="spendMoney()">💸 Расход</button>
     </div>
 
-    <!-- Форма транзакции -->
-    <div id="transactionForm" class="form-modal" style="display: none;">
-        <h2 id="formTitle">💰 Добавить</h2>
-
-        <div class="form-group">
-            <input type="number" id="amount" placeholder="Сумма" step="0.01">
-        </div>
-
-        <div class="form-group">
-            <select id="category">
-                <option value="food">🍔 Еда</option>
-                <option value="transport">🚗 Транспорт</option>
-                <option value="entertainment">🎮 Развлечения</option>
-                <option value="other">💰 Другое</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <input type="text" id="description" placeholder="Описание">
-        </div>
-
-        <div style="display: flex; gap: 10px;">
-            <button onclick="saveTransaction()" style="flex: 2;">✅ Сохранить</button>
-            <button onclick="hideForm()" class="secondary" style="flex: 1;">❌</button>
-        </div>
-    </div>
+    <div class="history" id="history"></div>
+    <div class="status" id="status">Готов</div>
 
     <script>
-        let tg = window.Telegram.WebApp;
+        let tg = Telegram.WebApp;
         tg.expand();
 
         let balance = 0;
         let transactions = [];
-        let currentType = 'income';
-        let userId = tg.initDataUnsafe?.user?.id || 'unknown';
-        let syncInProgress = false;
 
-        function formatMoney(amount) {
-            return amount.toFixed(2) + ' ₽';
+        // Загрузка при старте
+        async function loadData() {
+            let saved = localStorage.getItem('finance');
+            if (saved) {
+                let data = JSON.parse(saved);
+                balance = data.balance || 0;
+                transactions = data.transactions || [];
+                updateUI();
+            }
+            // Запрашиваем с сервера
+            tg.sendData(JSON.stringify({action: 'load'}));
         }
 
+        // Обновление экрана
         function updateUI() {
-            document.getElementById('balance').textContent = formatMoney(balance);
+            document.getElementById('balance').innerText = balance.toFixed(2) + ' ₽';
 
-            let today = new Date().toDateString();
-            let todayIncome = 0;
-            let todayExpense = 0;
-
-            transactions.forEach(t => {
-                if (new Date(t.date).toDateString() === today) {
-                    if (t.type === 'income') todayIncome += t.amount;
-                    else todayExpense += t.amount;
-                }
+            let html = '<h3>История</h3>';
+            transactions.slice(-5).reverse().forEach(t => {
+                let sign = t.type === 'income' ? '+' : '-';
+                let color = t.type === 'income' ? '#4CAF50' : '#f44336';
+                html += `<div class="item">
+                    <span>${t.desc || 'Операция'}</span>
+                    <span style="color: ${color}">${sign}${t.amount} ₽</span>
+                </div>`;
             });
+            document.getElementById('history').innerHTML = html;
 
-            document.getElementById('todayStats').innerHTML =
-                `Доходы: ${formatMoney(todayIncome)} | Расходы: ${formatMoney(todayExpense)}`;
-        }
-
-        function showForm(type) {
-            currentType = type;
-            document.getElementById('formTitle').textContent =
-                type === 'income' ? '💰 Добавить доход' : '💸 Добавить расход';
-            document.getElementById('app').style.display = 'none';
-            document.getElementById('transactionForm').style.display = 'block';
-        }
-
-        function hideForm() {
-            document.getElementById('transactionForm').style.display = 'none';
-            document.getElementById('app').style.display = 'block';
-            document.getElementById('amount').value = '';
-        }
-
-        // АВТОМАТИЧЕСКАЯ синхронизация с ботом
-        function syncWithBot() {
-            if (syncInProgress) return;
-
-            syncInProgress = true;
-            document.getElementById('syncStatus').textContent = '🔄 Синхронизация...';
-
-            let data = {
-                balance: balance,
-                transactions: transactions,
-                userId: userId
-            };
-
-            tg.sendData(JSON.stringify({
-                type: 'sync',
-                data: data
-            }));
-
-            // Показываем статус
-            setTimeout(() => {
-                document.getElementById('syncStatus').textContent = '✅ Синхронизировано';
-                syncInProgress = false;
-
-                // Через 3 секунды убираем сообщение
-                setTimeout(() => {
-                    document.getElementById('syncStatus').textContent = '🔄 Автосохранение';
-                }, 3000);
-            }, 1000);
-        }
-
-        // Сохранение транзакции
-        function saveTransaction() {
-            let amount = parseFloat(document.getElementById('amount').value);
-            let category = document.getElementById('category').value;
-            let description = document.getElementById('description').value;
-
-            if (isNaN(amount) || amount <= 0) {
-                tg.showAlert('Введите сумму');
-                return;
-            }
-
-            let transaction = {
-                id: Date.now(),
-                type: currentType,
-                amount: amount,
-                category: category,
-                description: description,
-                date: new Date().toISOString()
-            };
-
-            transactions.push(transaction);
-
-            if (currentType === 'income') {
-                balance += amount;
-            } else {
-                balance -= amount;
-            }
-
-            // Сохраняем локально
-            localStorage.setItem('financeData', JSON.stringify({
+            // Сохраняем
+            localStorage.setItem('finance', JSON.stringify({
                 balance: balance,
                 transactions: transactions
             }));
 
-            // АВТОМАТИЧЕСКИ синхронизируем с ботом
-            syncWithBot();
+            // Отправляем на сервер
+            tg.sendData(JSON.stringify({
+                action: 'save',
+                balance: balance,
+                transactions: transactions
+            }));
 
-            updateUI();
-            hideForm();
-            tg.showAlert('✅ Готово!');
+            document.getElementById('status').innerText = '✅ Сохранено';
         }
 
-        // Загрузка данных при старте
-        async function loadData() {
-            document.getElementById('syncStatus').textContent = '🔄 Загрузка...';
-
-            try {
-                // Сначала пробуем загрузить из localStorage
-                let saved = localStorage.getItem('financeData');
-                if (saved) {
-                    let data = JSON.parse(saved);
-                    balance = data.balance || 0;
-                    transactions = data.transactions || [];
-                    document.getElementById('syncStatus').textContent = '📦 Локальные данные';
-                }
-
-                // Запрашиваем данные у бота (асинхронно)
-                tg.sendData(JSON.stringify({
-                    type: 'getData',
-                    userId: userId
-                }));
-
-            } catch (e) {
-                console.log('Ошибка загрузки:', e);
-                document.getElementById('syncStatus').textContent = '⚠️ Ошибка загрузки';
+        // Добавить доход
+        function addMoney() {
+            let amount = prompt('Сумма дохода:');
+            if (amount && !isNaN(amount)) {
+                amount = parseFloat(amount);
+                balance += amount;
+                transactions.push({
+                    type: 'income',
+                    amount: amount,
+                    desc: 'Доход',
+                    date: new Date().toISOString()
+                });
+                updateUI();
             }
-
-            updateUI();
         }
 
-        // Слушаем сообщения от бота
-        window.addEventListener('message', function(event) {
+        // Добавить расход
+        function spendMoney() {
+            let amount = prompt('Сумма расхода:');
+            if (amount && !isNaN(amount)) {
+                amount = parseFloat(amount);
+                if (amount > balance) {
+                    alert('Недостаточно средств!');
+                    return;
+                }
+                balance -= amount;
+                transactions.push({
+                    type: 'expense',
+                    amount: amount,
+                    desc: 'Расход',
+                    date: new Date().toISOString()
+                });
+                updateUI();
+            }
+        }
+
+        // Слушаем ответ от бота
+        window.addEventListener('message', (event) => {
             try {
                 let data = JSON.parse(event.data);
-
-                if (data.type === 'sync' && data.data) {
-                    // Получены данные от бота
-                    let serverData = data.data;
-
-                    // Сравниваем с локальными (выбираем последние)
-                    let localTime = localStorage.getItem('financeData') ?
-                        JSON.parse(localStorage.getItem('financeData')).lastUpdate : 0;
-                    let serverTime = serverData.lastUpdate || 0;
-
-                    if (serverTime > localTime || transactions.length === 0) {
-                        // Данные с сервера новее
-                        balance = serverData.balance || 0;
-                        transactions = serverData.transactions || [];
-
-                        localStorage.setItem('financeData', JSON.stringify({
-                            balance: balance,
-                            transactions: transactions,
-                            lastUpdate: Date.now()
-                        }));
-
-                        document.getElementById('syncStatus').textContent = '✅ Загружено с сервера';
-                        updateUI();
-                    }
+                if (data.balance !== undefined) {
+                    balance = data.balance;
+                    transactions = data.transactions || [];
+                    updateUI();
+                    document.getElementById('status').innerText = '📦 Загружено с сервера';
                 }
-            } catch (e) {}
+            } catch(e) {}
         });
-
-        // Автоматическая синхронизация при выходе
-        window.addEventListener('beforeunload', function() {
-            syncWithBot();
-        });
-
-        // Периодическая синхронизация (каждые 30 секунд)
-        setInterval(() => {
-            if (transactions.length > 0) {
-                syncWithBot();
-            }
-        }, 30000);
 
         // Старт
         loadData();
