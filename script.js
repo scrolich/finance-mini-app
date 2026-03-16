@@ -1,5 +1,40 @@
-let tg = Telegram.WebApp;
-tg.expand();
+// Глобальная переменная для отслеживания режима
+const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+              window.navigator.standalone === true;
+
+console.log('🚀 Запуск в режиме:', isPWA ? 'PWA (иконка)' : 'Браузер');
+
+// Функция принудительной синхронизации
+function forceSync() {
+    console.log('🔄 Принудительная синхронизация...');
+    const data = localStorage.getItem('financeData');
+    if (data) {
+        try {
+            appState = JSON.parse(data);
+            initializeAccounts();
+            updateUI();
+            console.log('✅ Данные синхронизированы');
+        } catch (e) {
+            console.log('❌ Ошибка синхронизации:', e);
+        }
+    }
+}
+
+// Слушаем события от других вкладок
+window.addEventListener('storage', (event) => {
+    if (event.key === 'financeData' && event.newValue) {
+        console.log('📥 Обнаружены изменения в другом окне');
+        forceSync();
+    }
+});
+
+// Если это PWA, проверяем при каждом фокусе
+if (isPWA) {
+    window.addEventListener('focus', () => {
+        console.log('👆 PWA получило фокус, проверяем данные...');
+        forceSync();
+    });
+}
 
 let appState = {
     accounts: [
@@ -83,6 +118,11 @@ const ACCOUNT_TYPES = {
     cash: { name: 'Наличные', icon: '💰', color: '#FF9800' },
     investment: { name: 'Инвестиции', icon: '📈', color: '#9C27B0' }
 };
+
+// Сохраняем ссылку на appState в глобальной области
+window.appState = appState;
+window.updateUI = updateUI;
+window.saveData = saveData;
 
 function formatMoney(amount) {
     let value = amount * exchangeRates[currentCurrency];

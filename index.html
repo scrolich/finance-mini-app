@@ -553,5 +553,98 @@
 
     <!-- JavaScript -->
     <script src="script.js"></script>
+
+    <script>
+    // ===== АВТОМАТИЧЕСКАЯ СИНХРОНИЗАЦИЯ PWA И БРАУЗЕРА =====
+    (function() {
+        // Определяем режим запуска
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                     window.navigator.standalone === true;
+
+        console.log(`📱 Режим: ${isPWA ? 'PWA (иконка)' : 'Браузер'}`);
+
+        // Ключ для хранения данных
+        const STORAGE_KEY = 'financeData';
+
+        // Функция загрузки данных из localStorage
+        function loadFromStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved && window.appState) {
+                    const newData = JSON.parse(saved);
+                    // Обновляем только если данные действительно изменились
+                    if (JSON.stringify(window.appState) !== JSON.stringify(newData)) {
+                        console.log('🔄 Обновление данных из localStorage');
+                        Object.assign(window.appState, newData);
+                        if (typeof window.updateUI === 'function') {
+                            window.updateUI();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log('Ошибка загрузки:', e);
+            }
+        }
+
+        // Сохраняем оригинальный setItem
+        const originalSetItem = localStorage.setItem;
+
+        // Переопределяем setItem для автоматического оповещения
+        localStorage.setItem = function(key, value) {
+            // Вызываем оригинальный метод
+            originalSetItem.call(this, key, value);
+
+            // Если это наши данные, оповещаем другие окна
+            if (key === STORAGE_KEY) {
+                console.log('📢 Данные обновлены, оповещаем другие окна');
+                // Создаем и диспатчим кастомное событие
+                window.dispatchEvent(new CustomEvent('localDataUpdated', {
+                    detail: { key, value }
+                }));
+            }
+        };
+
+        // Слушаем изменения в localStorage от других окон
+        window.addEventListener('storage', (event) => {
+            if (event.key === STORAGE_KEY && event.newValue) {
+                console.log('📥 Обнаружены изменения в localStorage');
+                loadFromStorage();
+            }
+        });
+
+        // Слушаем кастомные события от этого же окна
+        window.addEventListener('localDataUpdated', () => {
+            console.log('📥 Обновление в этом же окне');
+            loadFromStorage();
+        });
+
+        // Для PWA: проверяем при каждом фокусе
+        if (isPWA) {
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    console.log('👆 PWA в фокусе, проверяем данные');
+                    loadFromStorage();
+                }
+            });
+
+            // Также проверяем периодически (раз в 2 секунды)
+            setInterval(loadFromStorage, 2000);
+        } else {
+            // Для браузера тоже проверяем периодически
+            setInterval(loadFromStorage, 2000);
+        }
+
+        // Перехватываем сохранение данных в приложении
+        const originalSaveData = window.saveData;
+        window.saveData = function() {
+            if (originalSaveData) {
+                originalSaveData();
+            }
+            // После сохранения, localStorage сам оповестит другие окна
+        };
+
+        console.log('✅ Система синхронизации запущена');
+    })();
+</script>
 </body>
 </html>
