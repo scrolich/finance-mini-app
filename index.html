@@ -757,5 +757,74 @@
             if (e.key === 'Escape') hideQuickActions();
         });
     </script>
+<script>
+    // ЖЕСТКИЙ ПИНДОК ДЛЯ PWA
+    (function() {
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                     window.navigator.standalone === true;
+
+        console.log('💥 Режим:', isPWA ? 'PWA' : 'Браузер');
+
+        // Если это PWA — ***ем кэш в ***
+        if (isPWA) {
+            console.log('💥 PWA режим — убиваем кэш на ***');
+
+            // 1. Удаляем всё хранилище на ***
+            localStorage.clear();
+
+            // 2. Загружаем свежие данные с сервера
+            fetch('https://finance-mini-app.vercel.app/api/load')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.data) {
+                        localStorage.setItem('financeData', JSON.stringify(data.data));
+                        if (window.appState) {
+                            Object.assign(window.appState, data.data);
+                            if (window.updateUI) window.updateUI();
+                        }
+                        console.log('💥 Данные загружены с сервера');
+                    }
+                });
+
+            // 3. ***им перезагрузку каждую секунду
+            setInterval(() => {
+                fetch('https://finance-mini-app.vercel.app/api/load')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.data) {
+                            const localData = localStorage.getItem('financeData');
+                            if (JSON.stringify(data.data) !== localData) {
+                                console.log('💥 Обновляем данные');
+                                localStorage.setItem('financeData', JSON.stringify(data.data));
+                                if (window.appState) {
+                                    Object.assign(window.appState, data.data);
+                                    if (window.updateUI) window.updateUI();
+                                }
+                            }
+                        }
+                    });
+            }, 1000); // КАЖДУЮ СЕКУНДУ
+        }
+
+        // Для браузера тоже проверяем каждые 2 секунды
+        setInterval(() => {
+            fetch('https://finance-mini-app.vercel.app/api/load')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.data) {
+                        const localData = localStorage.getItem('financeData');
+                        if (JSON.stringify(data.data) !== localData) {
+                            console.log('💥 Обновляем данные в браузере');
+                            localStorage.setItem('financeData', JSON.stringify(data.data));
+                            if (window.appState) {
+                                Object.assign(window.appState, data.data);
+                                if (window.updateUI) window.updateUI();
+                            }
+                        }
+                    }
+                });
+        }, 2000);
+    })();
+</script>
 </body>
 </html>
