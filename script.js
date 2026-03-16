@@ -17,6 +17,10 @@ let appState = {
     budget: 0,
     activeAccount: 'main',
     plans: []
+    customCategories: {  // ← ДОБАВЬ ЭТО
+        income: [],
+        expense: []
+    }
 };
 
 let categoriesChart = null;
@@ -25,6 +29,9 @@ let balanceChart = null;
 let currentChart = 'categories';
 let currentCurrency = 'RUB';
 let currentType = 'income';
+let currentPeriod = 'month';
+let customStartDate = null;
+let customEndDate = null;
 
 const exchangeRates = {
     'RUB': 1,
@@ -45,6 +52,285 @@ function formatMoney(amount) {
     if (currentCurrency === 'RUB') return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';
     if (currentCurrency === 'USD') return '$' + value.toFixed(2);
     return '€' + value.toFixed(2);
+}
+
+// Установка периода
+function setPeriod(period) {
+    currentPeriod = period;
+
+    // Обновляем кнопки
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.getElementById(`period-${period}`).classList.add('active');
+
+    // Показываем/скрываем свой период
+    document.getElementById('customPeriod').style.display = period === 'custom' ? 'block' : 'none';
+
+    // Обновляем статистику
+    updateStatsByPeriod();
+}
+
+// Применить свой период
+function applyCustomPeriod() {
+    const start = document.getElementById('startDate').value;
+    const end = document.getElementById('endDate').value;
+
+    if (!start || !end) {
+        tg.showAlert('Выберите даты');
+        return;
+    }
+
+    customStartDate = new Date(start);
+    customEndDate = new Date(end);
+    customEndDate.setHours(23, 59, 59);
+
+    updateStatsByPeriod();
+}
+
+// Получить даты для периода
+function getPeriodDates() {
+    const now = new Date();
+    let startDate, endDate;
+
+    switch(currentPeriod) {
+        case 'day':
+            startDate = new Date(now);
+            startDate.setHours(0, 0, 0);
+            endDate = new Date(now);
+            endDate.setHours(23, 59, 59);
+            break;
+
+        case 'week':
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - now.getDay() + 1);
+            startDate.setHours(0, 0, 0);
+            endDate = new Date(now);
+            endDate.setHours(23, 59, 59);
+            break;
+
+        case 'month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now);
+            endDate.setHours(23, 59, 59);
+            break;
+
+        case 'quarter':
+            const quarter = Math.floor(now.getMonth() / 3);
+            startDate = new Date(now.getFullYear(), quarter * 3, 1);
+            endDate = new Date(now);
+            endDate.setHours(23, 59, 59);
+            break;
+
+        case 'year':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            endDate = new Date(now);
+            endDate.setHours(23, 59, 59);
+            break;
+
+        case 'custom':
+            startDate = customStartDate;
+            endDate = customEndDate;
+            break;
+    }
+
+    return { startDate, endDate };
+}
+
+// Обновить статистику по выбранному периоду
+function updateStatsByPeriod() {
+    const { startDate, endDate } = getPeriodDates();
+
+    if (!startDate || !endDate) return;
+
+    // Фильтруем транзакции по дате
+    const filteredTransactions = appState.transactions.filter(t => {
+        const tDate = new Date(t.date);
+        return tDate >= startDate && tDate <= endDate;
+    });
+
+    // Считаем доходы и расходы за период
+    let periodIncome = 0;
+    let periodExpense = 0;
+
+    filteredTransactions.forEach(t => {
+        if (t.type === 'income') {
+            periodIncome += t.amount;
+        } else {
+            periodExpense += t.amount;
+        }
+    });
+
+    // Обновляем UI для статистики за период
+    document.getElementById('todayIncome').textContent = formatMoney(periodIncome);
+    document.getElementById('todayExpense').textContent = formatMoney(periodExpense);
+
+    // Обновляем историю за период
+    updateHistory(filteredTransactions);
+
+    // Обновляем графики за период
+    updateChartsWithFilter(filteredTransactions);
+}
+
+// Обновить функцию updateUI
+function updateUI() {
+    const activeAccount = appState.accounts.find(a => a.id === appState.activeAccount);
+    if (activeAccount) document.getElementById('balance').textContent = formatMoney(activeAccount.balance);
+
+    // Обновляем статистику по выбранному периоду вместо сегодня
+    updateStatsByPeriod();
+
+    updateBudgetUI();
+    updateCharts();
+    updatePlans();
+}
+
+// Новая функция для обновления графиков с фильтром
+function updateChartsWithFilter(transactions) {
+    updateCategoriesChartWithFilter(transactions);
+    updateDailyChartWithFilter(transactions);
+    updateBalanceChartWithFilter(transactions);
+    updateTotalsWithFilter(transactions);
+}
+
+// Обновляем функции графиков с фильтром
+function updateCategoriesChartWithFilter(transactions) {
+    const ctx = document.getElementById('categoriesChart').getContext('2d');
+    const expensesByCategory = {};
+
+    transactions.forEach(t => {
+        if (t.type === 'expense') {
+            const catName = getCategoryName(t.category);
+            expensesByCategory[catName] = (expensesByCategory[catName] || 0) + t.amount;
+        }
+    });
+
+    if (Object.keys(expensesByCategory).length === 0) expensesByCategory['Нет данных'] = 1;
+    if (categoriesChart) categoriesChart.destroy();
+
+    categoriesChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(expensesByCategory),
+            datasets: [{
+                data: Object.values(expensesByCategory),
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+function updateDailyChartWithFilter(transactions) {
+    const ctx = document.getElementById('dailyChart').getContext('2d');
+    const { startDate, endDate } = getPeriodDates();
+
+    if (!startDate || !endDate) return;
+
+    const labels = [];
+    const incomeData = [];
+    const expenseData = [];
+
+    // Группируем по дням в выбранном периоде
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+        const dateStr = currentDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+        labels.push(dateStr);
+
+        let dayIncome = 0;
+        let dayExpense = 0;
+
+        transactions.forEach(t => {
+            const tDate = new Date(t.date);
+            if (tDate.toDateString() === currentDate.toDateString()) {
+                if (t.type === 'income') dayIncome += t.amount;
+                else dayExpense += t.amount;
+            }
+        });
+
+        incomeData.push(dayIncome);
+        expenseData.push(dayExpense);
+
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    if (dailyChart) dailyChart.destroy();
+
+    dailyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Доходы', data: incomeData, backgroundColor: '#4CAF50' },
+                { label: 'Расходы', data: expenseData, backgroundColor: '#F44336' }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+function updateBalanceChartWithFilter(transactions) {
+    const ctx = document.getElementById('balanceChart').getContext('2d');
+    const { startDate, endDate } = getPeriodDates();
+
+    if (!startDate || !endDate) return;
+
+    const labels = [];
+    const balanceData = [];
+
+    let runningBalance = 0;
+    const currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+        const dateStr = currentDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+        labels.push(dateStr);
+
+        transactions.forEach(t => {
+            const tDate = new Date(t.date);
+            if (tDate.toDateString() === currentDate.toDateString()) {
+                if (t.type === 'income') runningBalance += t.amount;
+                else runningBalance -= t.amount;
+            }
+        });
+
+        balanceData.push(runningBalance);
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    if (balanceChart) balanceChart.destroy();
+
+    balanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Баланс',
+                data: balanceData,
+                borderColor: '#40A7E3',
+                backgroundColor: 'rgba(64, 167, 227, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+function updateTotalsWithFilter(transactions) {
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    transactions.forEach(t => {
+        if (t.type === 'income') totalIncome += t.amount;
+        else totalExpense += t.amount;
+    });
+
+    document.getElementById('totalIncome').textContent = formatMoney(totalIncome);
+    document.getElementById('totalExpense').textContent = formatMoney(totalExpense);
+
+    const diff = totalIncome - totalExpense;
+    document.getElementById('totalDiff').textContent = formatMoney(diff);
+    document.getElementById('totalDiff').className = diff >= 0 ? 'income' : 'expense';
 }
 
 function getCategoryName(category) {
@@ -849,3 +1135,179 @@ function skipInitialBalance() {
 
 // Удаляем старую функцию showBalanceForm и связанные с ней
 // (можно удалить функции showBalanceForm, hideBalanceForm, setInitialBalance - старые)
+// Переменная для текущего типа категорий
+let currentCategoryType = 'expense';
+
+// Показать категории определенного типа
+function showCategoryType(type) {
+    currentCategoryType = type;
+
+    // Обновляем кнопки
+    document.getElementById('cat-income-btn').classList.toggle('active', type === 'income');
+    document.getElementById('cat-expense-btn').classList.toggle('active', type === 'expense');
+
+    // Показываем нужный список
+    document.getElementById('incomeCategoriesList').style.display = type === 'income' ? 'block' : 'none';
+    document.getElementById('expenseCategoriesList').style.display = type === 'expense' ? 'block' : 'none';
+
+    updateCategoriesList();
+}
+
+// Обновление списка категорий
+function updateCategoriesList() {
+    const incomeList = document.getElementById('incomeCategoriesList');
+    const expenseList = document.getElementById('expenseCategoriesList');
+
+    // Доходы
+    incomeList.innerHTML = getCategoriesHTML('income');
+
+    // Расходы
+    expenseList.innerHTML = getCategoriesHTML('expense');
+}
+
+// Получение HTML для категорий
+function getCategoriesHTML(type) {
+    const categories = appState.customCategories?.[type] || [];
+
+    if (categories.length === 0) {
+        return '<p style="text-align: center; color: var(--hint-color); padding: 20px;">Нет своих категорий</p>';
+    }
+
+    return categories.map(cat => `
+        <div class="category-item">
+            <div class="category-item-left">
+                <div class="category-icon" style="background: ${cat.color}20; color: ${cat.color}">
+                    ${cat.icon}
+                </div>
+                <span class="category-name">${cat.name}</span>
+            </div>
+            <div class="category-actions">
+                <button onclick="editCategory('${cat.id}')">✏️</button>
+                <button onclick="deleteCategory('${cat.id}')">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Показать форму создания категории
+function showCategoryForm() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('categoryForm').style.display = 'block';
+
+    // Сбрасываем форму
+    document.getElementById('categoryName').value = '';
+    document.getElementById('categoryIcon').value = '📌';
+    document.getElementById('categoryColor').value = '#40a7e3';
+}
+
+// Скрыть форму категории
+function hideCategoryForm() {
+    document.getElementById('categoryForm').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+}
+
+// Сохранить категорию
+function saveCategory() {
+    const type = document.getElementById('categoryType').value;
+    const name = document.getElementById('categoryName').value;
+    const icon = document.getElementById('categoryIcon').value;
+    const color = document.getElementById('categoryColor').value;
+
+    if (!name) {
+        tg.showAlert('Введите название категории');
+        return;
+    }
+
+    if (!appState.customCategories) {
+        appState.customCategories = { income: [], expense: [] };
+    }
+
+    const newCategory = {
+        id: 'cat_' + Date.now(),
+        name: name,
+        icon: icon || '📌',
+        color: color,
+        type: type
+    };
+
+    appState.customCategories[type].push(newCategory);
+
+    // Обновляем селектор категорий в формах
+    updateCategorySelector();
+
+    updateCategoriesList();
+    saveData();
+    hideCategoryForm();
+
+    tg.showAlert(`✅ Категория "${name}" создана`);
+}
+
+// Редактирование категории
+function editCategory(categoryId) {
+    // Ищем категорию во всех типах
+    let category = null;
+    let categoryType = null;
+
+    for (const type of ['income', 'expense']) {
+        const found = appState.customCategories?.[type]?.find(c => c.id === categoryId);
+        if (found) {
+            category = found;
+            categoryType = type;
+            break;
+        }
+    }
+
+    if (!category) return;
+
+    const newName = prompt('Новое название категории:', category.name);
+    if (newName) {
+        category.name = newName;
+        updateCategoriesList();
+        updateCategorySelector();
+        saveData();
+    }
+}
+
+// Удаление категории
+function deleteCategory(categoryId) {
+    if (!confirm('Удалить категорию?')) return;
+
+    for (const type of ['income', 'expense']) {
+        if (appState.customCategories?.[type]) {
+            appState.customCategories[type] = appState.customCategories[type].filter(c => c.id !== categoryId);
+        }
+    }
+
+    updateCategoriesList();
+    updateCategorySelector();
+    saveData();
+}
+
+// Обновление селектора категорий в формах
+function updateCategorySelector() {
+    const categorySelect = document.getElementById('category');
+    if (!categorySelect) return;
+
+    // Сохраняем стандартные категории
+    const incomeOptgroup = document.getElementById('incomeCategories');
+    const expenseOptgroup = document.getElementById('expenseCategories');
+
+    // Добавляем пользовательские категории
+    if (appState.customCategories?.income) {
+        appState.customCategories.income.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = `${cat.icon} ${cat.name}`;
+            incomeOptgroup.appendChild(option);
+        });
+    }
+
+    if (appState.customCategories?.expense) {
+        appState.customCategories.expense.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = `${cat.icon} ${cat.name}`;
+            expenseOptgroup.appendChild(option);
+        });
+    }
+}
