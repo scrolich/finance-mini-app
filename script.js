@@ -33,6 +33,42 @@ let currentPeriod = 'month';
 let customStartDate = null;
 let customEndDate = null;
 let currentCategoryType = 'expense';
+// Данные для эмодзи по категориям
+const emojiData = {
+    all: ['🍔', '🍕', '🍣', '🍜', '🍝', '🍱', '🍛', '🍙', '🍚', '🍘', '🍢', '🍡', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '☕', '🍵', '🥤', '🧃', '🧋', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🛵', '🏍️', '🚲', '🛴', '🚦', '🚧', '⛽', '🅿️', '🚉', '🚇', '✈️', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛳️', '⛴️', '🚢', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🗼', '⛲', '🌲', '🌳', '🌴', '🌵', '🌿', '🍀', '🍃', '🌱', '💊', '💉', '🩺', '🏥', '🤒', '🤕', '😷', '🤧', '🤮', '💪', '🦵', '🦶', '👂', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '🎮', '🎲', '🎯', '🎳', '🎰', '🎪', '🎨', '🎭', '🎤', '🎧', '🎸', '🎹', '🎺', '🎻', '🥁', '🎬', '📚', '📖', '📕', '📗', '📘', '📙', '📔', '📒', '📃', '📜', '📄', '📰', '🎓', '✏️', '✒️', '🖊️', '🖋️', '🖌️', '🖍️', '📝', '💼', '👔', '👕', '👖', '👗', '👘', '👙', '👚', '👛', '👜', '👝', '🎒', '👞', '👟', '👠', '👡', '👢', '👑', '👒', '🎩', '🎓', '🧢', '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎳', '🏏', '🏑', '🏒', '🏓', '🏸', '🥊', '🥋', '⛸️', '🎿', '⛷️', '🏂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘', '✈️', '🌍', '🌎', '🌏', '🗺️', '🧳', '⛱️', '🏖️', '🏝️', '🏜️', '🏔️', '⛰️', '🌋', '🏞️', '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐙', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🐢', '🐍', '🦎', '🐟', '🐠', '🐡', '🐬', '🐳', '🐋', '🦈', '🎁', '🎀', '🎊', '🎉', '🎈', '🪅', '🎎', '🎏', '🎐', '🧧', '💰', '💵', '💴', '💶', '💷', '💳', '💎', '⚖️', '📊', '📈', '📉', '💻', '🖥️', '💽', '💾', '💿', '📀', '📱', '📲', '☎️', '📞', '📟', '📠', '📺', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📼', '🔊', '📢', '📣', '🔔', '🎵', '🎶', '🎙️', '🎚️', '🎛️', '🎧', '📻', '🪄', '✨', '🌟', '⭐', '🌠', '⏰', '⌛', '📅', '📆', '🗓️', '🔒', '🔓', '🔑', '🗝️', '🔨', '🪛', '🔧', '🔩', '⚙️', '🧰', '🧲', '🔬', '🔭', '📡', '💡', '🔦', '🏮', '🪔', '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃', '📜', '📄', '📰', '🗞️', '📑', '🔖', '🏷️', '💰', '🪙', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️'],
+
+    food: ['🍔', '🍕', '🍣', '🍜', '🍝', '🍱', '🍛', '🍙', '🍚', '🍘', '🍢', '🍡', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '☕', '🍵', '🥤', '🧃', '🧋', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃'],
+
+    transport: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🛵', '🏍️', '🚲', '🛴', '🚦', '🚧', '⛽', '🅿️', '🚉', '🚇', '✈️', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛳️', '⛴️', '🚢'],
+
+    shopping: ['🛍️', '👕', '👖', '👗', '👔', '👚', '🧥', '🧦', '👟', '👞', '👠', '👡', '👢', '🧢', '🎩', '👒', '🕶️', '👓', '💍', '⌚', '📱', '💻', '🖥️', '📷', '🎧', '🔋', '💡', '🕯️'],
+
+    home: ['🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🛏️', '🛋️', '🚪', '🪑', '🛁', '🚿', '🧹', '🧺', '🧼', '🪣'],
+
+    health: ['💊', '💉', '🩺', '🏥', '🤒', '🤕', '😷', '🤧', '🤮', '💪', '🦵', '🦶', '👂', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '🧘', '🏃', '🚶'],
+
+    entertainment: ['🎮', '🎲', '🎯', '🎳', '🎰', '🎪', '🎨', '🎭', '🎤', '🎧', '🎸', '🎹', '🎺', '🎻', '🥁', '🎬', '📺', '📽️', '🎞️', '📚', '🎵', '🎶'],
+
+    education: ['📚', '📖', '📕', '📗', '📘', '📙', '📔', '📒', '📃', '📜', '📄', '📰', '🎓', '✏️', '✒️', '🖊️', '🖋️', '🖌️', '🖍️', '📝', '📐', '📏', '🔬', '🔭'],
+
+    work: ['💼', '👔', '📊', '📈', '📉', '📋', '📁', '🗂️', '📅', '📆', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📞', '💻', '🖥️', '🖨️', '⌨️', '🖱️'],
+
+    sports: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎳', '🏏', '🏑', '🏒', '🏓', '🏸', '🥊', '🥋', '⛸️', '🎿', '⛷️', '🏂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘'],
+
+    travel: ['✈️', '🌍', '🌎', '🌏', '🗺️', '🧳', '⛱️', '🏖️', '🏝️', '🏜️', '🏔️', '⛰️', '🌋', '🏞️', '🏕️', '🏟️', '🏛️', '🏗️', '🏘️', '🏙️'],
+
+    pets: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐙', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🐢', '🐍', '🦎', '🐟', '🐠', '🐡', '🐬', '🐳', '🐋', '🦈'],
+
+    gifts: ['🎁', '🎀', '🎊', '🎉', '🎈', '🪅', '🎎', '🎏', '🎐', '🧧', '💝', '💖', '💗', '💓', '💞', '💕', '💌'],
+
+    finance: ['💰', '💵', '💴', '💶', '💷', '💳', '💎', '⚖️', '📊', '📈', '📉', '🏦', '🧾', '📑', '🔖', '🏷️'],
+
+    tech: ['💻', '🖥️', '💽', '💾', '💿', '📀', '📱', '📲', '☎️', '📞', '📟', '📠', '📺', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📼', '🔊', '📢', '📣', '🔔', '🎵', '🎶', '🎙️', '🎚️', '🎛️', '🎧', '📻'],
+
+    other: ['✨', '🌟', '⭐', '🌠', '⏰', '⌛', '📅', '📆', '🗓️', '🔒', '🔓', '🔑', '🗝️', '🔨', '🪛', '🔧', '🔩', '⚙️', '🧰', '🧲', '🔬', '🔭', '📡', '💡', '🔦', '🏮', '🪔']
+};
+
+let selectedEmoji = '💰';
 
 const exchangeRates = {
     'RUB': 1,
@@ -106,6 +142,7 @@ function loadData() {
         }
     }
     initializeAccounts();
+    updateCategorySelector();
     updateUI();
     setTimeout(checkFirstLaunch, 500);
 }
@@ -1477,4 +1514,228 @@ document.addEventListener('DOMContentLoaded', loadData);
 
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+}
+
+// Обновление списка эмодзи
+function updateEmojiList() {
+    const emojiCategory = document.getElementById('emojiCategory')?.value || 'all';
+    const grid = document.getElementById('emojiGrid');
+    if (!grid) return;
+
+    const emojis = emojiData[emojiCategory] || emojiData.all;
+
+    grid.innerHTML = emojis.map(emoji => `
+        <div class="emoji-item ${selectedEmoji === emoji ? 'selected' : ''}"
+             onclick="selectEmoji('${emoji}')">
+            ${emoji}
+        </div>
+    `).join('');
+}
+
+// Выбор эмодзи
+function selectEmoji(emoji) {
+    selectedEmoji = emoji;
+    updateEmojiList();
+}
+
+// Обновленная функция showCategoryForm
+function showCategoryForm() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('categoryForm').style.display = 'block';
+
+    // Сбрасываем форму
+    document.getElementById('categoryName').value = '';
+    document.getElementById('categoryColor').value = '#40a7e3';
+    document.getElementById('emojiCategory').value = 'all';
+    selectedEmoji = '💰';
+    updateEmojiList();
+}
+
+// Обновленная функция saveCategory
+function saveCategory() {
+    const type = document.getElementById('categoryType').value;
+    const name = document.getElementById('categoryName').value;
+    const color = document.getElementById('categoryColor').value;
+
+    if (!name) {
+        tg.showAlert('Введите название категории');
+        return;
+    }
+
+    if (!appState.customCategories) {
+        appState.customCategories = { income: [], expense: [] };
+    }
+
+    const newCategory = {
+        id: 'cat_' + Date.now(),
+        name: name,
+        icon: selectedEmoji,
+        color: color,
+        type: type
+    };
+
+    appState.customCategories[type].push(newCategory);
+
+    // Обновляем селектор категорий
+    updateCategorySelector();
+    updateCategoriesList();
+    saveData();
+    hideCategoryForm();
+
+    tg.showAlert(`✅ Категория "${name}" создана`);
+}
+
+// Обновленная функция updateCategorySelector
+function updateCategorySelector() {
+    const categorySelect = document.getElementById('category');
+    if (!categorySelect) return;
+
+    // Очищаем стандартные опции, но оставляем основные
+    const incomeOptgroup = document.getElementById('incomeCategories');
+    const expenseOptgroup = document.getElementById('expenseCategories');
+
+    if (incomeOptgroup) {
+        // Оставляем основные категории доходов (5 штук)
+        while (incomeOptgroup.children.length > 5) {
+            incomeOptgroup.removeChild(incomeOptgroup.lastChild);
+        }
+
+        // Добавляем пользовательские категории доходов
+        if (appState.customCategories?.income) {
+            appState.customCategories.income.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = `${cat.icon} ${cat.name}`;
+                incomeOptgroup.appendChild(option);
+            });
+        }
+    }
+
+    if (expenseOptgroup) {
+        // Оставляем основные категории расходов (12 штук)
+        while (expenseOptgroup.children.length > 12) {
+            expenseOptgroup.removeChild(expenseOptgroup.lastChild);
+        }
+
+        // Добавляем пользовательские категории расходов
+        if (appState.customCategories?.expense) {
+            appState.customCategories.expense.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = `${cat.icon} ${cat.name}`;
+                expenseOptgroup.appendChild(option);
+            });
+        }
+    }
+}
+
+// Обновленная функция getCategoryName
+function getCategoryName(category) {
+    // Сначала проверяем пользовательские категории
+    if (appState.customCategories) {
+        for (let type of ['income', 'expense']) {
+            const found = appState.customCategories[type]?.find(c => c.id === category);
+            if (found) return `${found.icon} ${found.name}`;
+        }
+    }
+
+    // Стандартные категории
+    const categories = {
+        'salary': '💼 Зарплата',
+        'gifts': '🎁 Подарки',
+        'investments': '📈 Инвестиции',
+        'freelance': '💻 Фриланс',
+        'food': '🍔 Еда',
+        'housing': '🏠 Жилье',
+        'transport': '🚗 Транспорт',
+        'clothes': '👕 Одежда',
+        'health': '💊 Здоровье',
+        'entertainment': '🎮 Развлечения',
+        'education': '📚 Образование',
+        'pets': '🐶 Животные',
+        'communication': '📱 Связь',
+        'work': '💼 Работа',
+        'initial': '💰 Начальный баланс',
+        'transfer': '🔄 Перевод'
+    };
+
+    return categories[category] || category;
+}
+
+// Обновленная функция updateCategoriesList
+function updateCategoriesList() {
+    const incomeList = document.getElementById('incomeCategoriesList');
+    const expenseList = document.getElementById('expenseCategoriesList');
+
+    if (incomeList) {
+        incomeList.innerHTML = getCategoriesListHTML('income');
+    }
+
+    if (expenseList) {
+        expenseList.innerHTML = getCategoriesListHTML('expense');
+    }
+}
+
+function getCategoriesListHTML(type) {
+    const categories = appState.customCategories?.[type] || [];
+
+    if (categories.length === 0) {
+        return '<p style="text-align: center; color: var(--hint-color); padding: 20px;">Нет своих категорий</p>';
+    }
+
+    return categories.map(cat => `
+        <div class="category-item">
+            <div class="category-item-left">
+                <div class="category-icon" style="background: ${cat.color}20; color: ${cat.color}">
+                    ${cat.icon}
+                </div>
+                <span class="category-name">${cat.name}</span>
+                <span class="category-type-badge">${type === 'income' ? '💰' : '💸'}</span>
+            </div>
+            <div class="category-actions">
+                <button onclick="editCategory('${cat.id}')">✏️</button>
+                <button onclick="deleteCategory('${cat.id}')">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Обновленная функция editCategory
+function editCategory(categoryId) {
+    let category = null;
+    let categoryType = null;
+
+    for (const type of ['income', 'expense']) {
+        const found = appState.customCategories?.[type]?.find(c => c.id === categoryId);
+        if (found) {
+            category = found;
+            categoryType = type;
+            break;
+        }
+    }
+
+    if (!category) return;
+
+    const newName = prompt('Новое название категории:', category.name);
+    if (newName) {
+        category.name = newName;
+        updateCategoriesList();
+        updateCategorySelector();
+        saveData();
+    }
+}
+
+// Обновленная функция deleteCategory
+function deleteCategory(categoryId) {
+    if (!confirm('Удалить категорию?')) return;
+
+    for (const type of ['income', 'expense']) {
+        if (appState.customCategories?.[type]) {
+            appState.customCategories[type] = appState.customCategories[type].filter(c => c.id !== categoryId);
+        }
+    }
+
+    updateCategoriesList();
+    updateCategorySelector();
+    saveData();
 }

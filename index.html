@@ -152,10 +152,10 @@
             </div>
             <button class="btn btn-small" onclick="showBudgetForm()">Установить бюджет</button>
         </div>
-        <!-- Свои категории -->
+        <!-- Управление категориями -->
         <div class="card">
             <div class="card-title">
-                <span>🏷️ Свои категории</span>
+                <span>🏷️ Мои категории</span>
                 <button class="btn-icon-small" onclick="showCategoryForm()">➕</button>
             </div>
 
@@ -165,13 +165,8 @@
                     <button class="tab-btn active" onclick="showCategoryType('expense')" id="cat-expense-btn">💸 Расходы</button>
                 </div>
 
-                <div id="incomeCategoriesList" style="display: none;">
-                    <!-- Доходы будут здесь -->
-                </div>
-
-                <div id="expenseCategoriesList">
-                    <!-- Расходы будут здесь -->
-                </div>
+                <div id="incomeCategoriesList" style="display: none;"></div>
+                <div id="expenseCategoriesList"></div>
             </div>
         </div>
 
@@ -370,34 +365,64 @@
             </div>
         </div>
     <!-- Форма создания категории -->
-    <div id="categoryForm" class="form-modal" style="display: none;">
-        <div class="form-header">
-            <h2>➕ Новая категория</h2>
-            <button class="close-btn" onclick="hideCategoryForm()">✖</button>
-        </div>
-
-        <div class="form-body">
-            <div class="form-group">
-                <label>Тип категории</label>
-                <select id="categoryType">
-                    <option value="income">💰 Доход</option>
-                    <option value="expense">💸 Расход</option>
-                </select>
+        <div id="categoryForm" class="form-modal" style="display: none;">
+            <div class="form-header">
+                <h2>➕ Новая категория</h2>
+                <button class="close-btn" onclick="hideCategoryForm()">✖</button>
             </div>
 
-            <div class="form-group">
-                <label>Название категории</label>
-                <input type="text" id="categoryName" placeholder="Например: Такси, Кафе, Аптека">
+            <div class="form-body">
+                <div class="form-group">
+                    <label>Тип категории</label>
+                    <select id="categoryType" onchange="updateEmojiList()">
+                        <option value="income">💰 Доход</option>
+                        <option value="expense">💸 Расход</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Название категории</label>
+                    <input type="text" id="categoryName" placeholder="Например: Такси, Кафе, Аптека">
+                </div>
+
+                <div class="form-group">
+                    <label>Категория эмодзи</label>
+                    <select id="emojiCategory" onchange="updateEmojiList()">
+                        <option value="all">Все</option>
+                        <option value="food">🍔 Еда и напитки</option>
+                        <option value="transport">🚗 Транспорт</option>
+                        <option value="shopping">🛍️ Покупки</option>
+                        <option value="home">🏠 Дом и семья</option>
+                        <option value="health">💊 Здоровье</option>
+                        <option value="entertainment">🎮 Развлечения</option>
+                        <option value="education">📚 Образование</option>
+                        <option value="work">💼 Работа</option>
+                        <option value="sports">⚽ Спорт</option>
+                        <option value="travel">✈️ Путешествия</option>
+                        <option value="pets">🐶 Животные</option>
+                        <option value="gifts">🎁 Подарки</option>
+                        <option value="finance">💰 Финансы</option>
+                        <option value="tech">💻 Технологии</option>
+                        <option value="other">✨ Другое</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Выберите эмодзи</label>
+                    <div id="emojiGrid" class="emoji-grid">
+                        <!-- Эмодзи будут загружаться сюда -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Цвет категории</label>
+                    <input type="color" id="categoryColor" value="#40a7e3">
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Иконка (эмодзи)</label>
-                <input type="text" id="categoryIcon" placeholder="Например: 🚕, ☕, 💊">
-            </div>
-
-            <div class="form-group">
-                <label>Цвет</label>
-                <input type="color" id="categoryColor" value="#40a7e3">
+            <div class="form-footer">
+                <button class="btn btn-primary" onclick="saveCategory()">✅ Сохранить</button>
+                <button class="btn btn-secondary" onclick="hideCategoryForm()">❌ Отмена</button>
             </div>
         </div>
 
