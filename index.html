@@ -21,7 +21,7 @@
 </head>
 <body>
     <div id="app">
-        <!-- Шапка с выбором счета -->
+        <!-- Шапка (видна на всех вкладках) -->
         <div class="header">
             <div class="account-selector">
                 <select id="accountSelect" onchange="switchAccount()" class="account-select"></select>
@@ -33,172 +33,216 @@
 
             <div class="account-stats" id="accountStats"></div>
 
-            <!-- Только кнопка перевода, без пополнения -->
             <div style="display: flex; gap: 10px; margin-top: 15px;">
                 <button class="btn btn-small btn-transfer" onclick="showTransferForm()" style="flex: 1;">🔄 Перевод</button>
             </div>
         </div>
 
-        <!-- Кнопки дохода и расхода -->
-        <div class="actions">
-            <button class="btn btn-income" onclick="showForm('income')">
-                <span class="btn-emoji">💰</span> Доход
+        <!-- Навигационные вкладки -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('main')" id="tab-main">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Главная</span>
             </button>
-            <button class="btn btn-expense" onclick="showForm('expense')">
-                <span class="btn-emoji">💸</span> Расход
+            <button class="nav-tab" onclick="switchTab('analytics')" id="tab-analytics">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Аналитика</span>
+            </button>
+            <button class="nav-tab" onclick="switchTab('plans')" id="tab-plans">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Планы</span>
             </button>
         </div>
 
-        <!-- Сводка по всем счетам -->
-        <div class="card">
-            <div class="card-title">🏦 Все счета</div>
-            <div id="accountsSummary" class="accounts-summary"></div>
-        </div>
-
-        <!-- Статистика за сегодня -->
-        <div class="card">
-            <div class="card-title">📊 Сегодня</div>
-            <div class="stats-row">
-                <div class="stat-item">
-                    <div class="stat-label">Доходы</div>
-                    <div class="stat-value income" id="todayIncome">0 ₽</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Расходы</div>
-                    <div class="stat-value expense" id="todayExpense">0 ₽</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Переключатель валют -->
-        <div class="currency-buttons">
-            <button class="currency-btn active-currency" onclick="setCurrency('RUB')" id="currency-rub">🇷🇺 RUB</button>
-            <button class="currency-btn" onclick="setCurrency('USD')" id="currency-usd">🇺🇸 USD</button>
-            <button class="currency-btn" onclick="setCurrency('EUR')" id="currency-eur">🇪🇺 EUR</button>
-        </div>
-
-        <!-- Выбор периода -->
-    <div class="card">
-        <div class="card-title">📅 Период</div>
-        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-            <button class="period-btn active" onclick="setPeriod('day')" id="period-day">День</button>
-            <button class="period-btn" onclick="setPeriod('week')" id="period-week">Неделя</button>
-            <button class="period-btn" onclick="setPeriod('month')" id="period-month">Месяц</button>
-            <button class="period-btn" onclick="setPeriod('quarter')" id="period-quarter">Квартал</button>
-            <button class="period-btn" onclick="setPeriod('year')" id="period-year">Год</button>
-            <button class="period-btn" onclick="setPeriod('custom')" id="period-custom">Свой</button>
-        </div>
-
-        <!-- Свой период (изначально скрыт) -->
-        <div id="customPeriod" style="display: none; margin-top: 10px;">
-            <div style="display: flex; gap: 10px;">
-                <input type="date" id="startDate" class="period-input" placeholder="С">
-                <input type="date" id="endDate" class="period-input" placeholder="По">
-            </div>
-            <button class="btn btn-small" onclick="applyCustomPeriod()" style="margin-top: 10px;">Применить</button>
-        </div>
-    </div>
-
-        <!-- Графики -->
-        <div class="card">
-            <div class="card-title">📊 Аналитика</div>
-
-            <div class="tab-buttons">
-                <button class="tab-btn active" onclick="showChart('categories')" id="tab-categories">По категориям</button>
-                <button class="tab-btn" onclick="showChart('daily')" id="tab-daily">По дням</button>
-                <button class="tab-btn" onclick="showChart('balance')" id="tab-balance">Баланс</button>
+        <!-- Контент главной страницы -->
+        <div id="main-content">
+            <!-- Кнопки дохода и расхода -->
+            <div class="actions">
+                <button class="btn btn-income" onclick="showForm('income')">
+                    <span class="btn-emoji">💰</span> Доход
+                </button>
+                <button class="btn btn-expense" onclick="showForm('expense')">
+                    <span class="btn-emoji">💸</span> Расход
+                </button>
             </div>
 
-            <div id="chart-categories" style="height: 250px;">
-                <canvas id="categoriesChart"></canvas>
-            </div>
-            <div id="chart-daily" style="height: 250px; display: none;">
-                <canvas id="dailyChart"></canvas>
-            </div>
-            <div id="chart-balance" style="height: 250px; display: none;">
-                <canvas id="balanceChart"></canvas>
+            <!-- Сводка по всем счетам -->
+            <div class="card">
+                <div class="card-title">🏦 Все счета</div>
+                <div id="accountsSummary" class="accounts-summary"></div>
             </div>
 
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--hint-color);">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span>💰 Всего доходов:</span>
-                    <span class="income" id="totalIncome">0 ₽</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span>💸 Всего расходов:</span>
-                    <span class="expense" id="totalExpense">0 ₽</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                    <span>📊 Разница:</span>
-                    <span id="totalDiff">0 ₽</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Последние операции -->
-        <div class="card">
-            <div class="card-title">📜 Последние операции</div>
-            <div id="history" class="history-list"></div>
-        </div>
-
-        <!-- Бюджет -->
-        <div class="card">
-            <div class="card-title">🎯 Бюджет месяца</div>
-            <div class="budget-progress">
-                <div class="progress-bar" id="budgetBar" style="width: 0%"></div>
-            </div>
-            <div class="budget-stats">
-                <span id="spentAmount">0 ₽</span> / <span id="budgetAmount">0 ₽</span>
-            </div>
-            <button class="btn btn-small" onclick="showBudgetForm()">Установить бюджет</button>
-        </div>
-        <!-- Управление категориями -->
-        <div class="card">
-            <div class="card-title">
-                <span>🏷️ Мои категории</span>
-                <button class="btn-icon-small" onclick="showCategoryForm()">➕</button>
-            </div>
-
-            <div style="margin-bottom: 10px;">
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <button class="tab-btn" onclick="showCategoryType('income')" id="cat-income-btn">💰 Доходы</button>
-                    <button class="tab-btn active" onclick="showCategoryType('expense')" id="cat-expense-btn">💸 Расходы</button>
-                </div>
-
-                <div id="incomeCategoriesList" style="display: none;"></div>
-                <div id="expenseCategoriesList"></div>
-            </div>
-        </div>
-
-        <!-- Планы расходов -->
-        <div class="card">
-            <div class="card-title">
-                <span>📋 Планы расходов</span>
-                <button class="btn-icon-small" onclick="showPlanForm()">➕</button>
-            </div>
-
-            <div id="plansSummary" class="plans-summary">
-                <div class="plan-stats">
-                    <div class="stat-block">
-                        <div class="stat-label">Запланировано</div>
-                        <div class="stat-value" id="totalPlanned">0 ₽</div>
+            <!-- Статистика за сегодня -->
+            <div class="card">
+                <div class="card-title">📊 Сегодня</div>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-label">Доходы</div>
+                        <div class="stat-value income" id="todayIncome">0 ₽</div>
                     </div>
-                    <div class="stat-block">
-                        <div class="stat-label">Выполнено</div>
-                        <div class="stat-value" id="totalCompleted">0 ₽</div>
-                    </div>
-                    <div class="stat-block">
-                        <div class="stat-label">Осталось</div>
-                        <div class="stat-value" id="totalRemaining">0 ₽</div>
+                    <div class="stat-item">
+                        <div class="stat-label">Расходы</div>
+                        <div class="stat-value expense" id="todayExpense">0 ₽</div>
                     </div>
                 </div>
             </div>
 
-            <div id="plansList" class="plans-list"></div>
-            <button class="btn btn-small" onclick="showPlanForm()" style="margin-top: 10px;">➕ Добавить план</button>
+            <!-- Последние операции -->
+            <div class="card">
+                <div class="card-title">📜 Последние операции</div>
+                <div id="history" class="history-list"></div>
+            </div>
+
+            <!-- Бюджет (быстрый доступ) -->
+            <div class="card">
+                <div class="card-title">🎯 Бюджет месяца</div>
+                <div class="budget-progress">
+                    <div class="progress-bar" id="budgetBar" style="width: 0%"></div>
+                </div>
+                <div class="budget-stats">
+                    <span id="spentAmount">0 ₽</span> / <span id="budgetAmount">0 ₽</span>
+                </div>
+                <button class="btn btn-small" onclick="switchTab('analytics')">Подробнее в аналитике</button>
+            </div>
         </div>
 
-        <!-- Кнопка сброса -->
+        <!-- Контент страницы аналитики (изначально скрыт) -->
+        <div id="analytics-content" style="display: none;">
+            <!-- Переключатель валют -->
+            <div class="currency-buttons">
+                <button class="currency-btn active-currency" onclick="setCurrency('RUB')" id="currency-rub">🇷🇺 RUB</button>
+                <button class="currency-btn" onclick="setCurrency('USD')" id="currency-usd">🇺🇸 USD</button>
+                <button class="currency-btn" onclick="setCurrency('EUR')" id="currency-eur">🇪🇺 EUR</button>
+            </div>
+
+            <!-- Выбор периода -->
+            <div class="card">
+                <div class="card-title">📅 Период</div>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <button class="period-btn active" onclick="setPeriod('day')" id="period-day">День</button>
+                    <button class="period-btn" onclick="setPeriod('week')" id="period-week">Неделя</button>
+                    <button class="period-btn" onclick="setPeriod('month')" id="period-month">Месяц</button>
+                    <button class="period-btn" onclick="setPeriod('quarter')" id="period-quarter">Квартал</button>
+                    <button class="period-btn" onclick="setPeriod('year')" id="period-year">Год</button>
+                    <button class="period-btn" onclick="setPeriod('custom')" id="period-custom">Свой</button>
+                </div>
+
+                <div id="customPeriod" style="display: none; margin-top: 10px;">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="date" id="startDate" class="period-input" placeholder="С">
+                        <input type="date" id="endDate" class="period-input" placeholder="По">
+                    </div>
+                    <button class="btn btn-small" onclick="applyCustomPeriod()" style="margin-top: 10px;">Применить</button>
+                </div>
+            </div>
+
+            <!-- Графики -->
+            <div class="card">
+                <div class="card-title">📊 Аналитика</div>
+
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="showChart('categories')" id="tab-categories">По категориям</button>
+                    <button class="tab-btn" onclick="showChart('daily')" id="tab-daily">По дням</button>
+                    <button class="tab-btn" onclick="showChart('balance')" id="tab-balance">Баланс</button>
+                </div>
+
+                <div id="chart-categories" style="height: 250px;">
+                    <canvas id="categoriesChart"></canvas>
+                </div>
+                <div id="chart-daily" style="height: 250px; display: none;">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+                <div id="chart-balance" style="height: 250px; display: none;">
+                    <canvas id="balanceChart"></canvas>
+                </div>
+
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--hint-color);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>💰 Всего доходов:</span>
+                        <span class="income" id="totalIncome">0 ₽</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>💸 Всего расходов:</span>
+                        <span class="expense" id="totalExpense">0 ₽</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                        <span>📊 Разница:</span>
+                        <span id="totalDiff">0 ₽</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Управление категориями -->
+            <div class="card">
+                <div class="card-title">
+                    <span>🏷️ Мои категории</span>
+                    <button class="btn-icon-small" onclick="showCategoryForm()">➕</button>
+                </div>
+
+                <div style="margin-bottom: 10px;">
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button class="tab-btn" onclick="showCategoryType('income')" id="cat-income-btn">💰 Доходы</button>
+                        <button class="tab-btn active" onclick="showCategoryType('expense')" id="cat-expense-btn">💸 Расходы</button>
+                    </div>
+
+                    <div id="incomeCategoriesList" style="display: none;"></div>
+                    <div id="expenseCategoriesList"></div>
+                </div>
+            </div>
+
+            <!-- Бюджет (подробно) -->
+            <div class="card">
+                <div class="card-title">🎯 Бюджет месяца</div>
+                <div class="budget-progress">
+                    <div class="progress-bar" id="budgetBarDetailed" style="width: 0%"></div>
+                </div>
+                <div class="budget-stats">
+                    <span id="spentAmountDetailed">0 ₽</span> / <span id="budgetAmountDetailed">0 ₽</span>
+                </div>
+                <button class="btn btn-small" onclick="showBudgetForm()">Изменить бюджет</button>
+            </div>
+        </div>
+
+        <!-- Контент страницы планов (изначально скрыт) -->
+        <div id="plans-content" style="display: none;">
+            <!-- Планы расходов -->
+            <div class="card">
+                <div class="card-title">
+                    <span>📋 Планы расходов</span>
+                    <button class="btn-icon-small" onclick="showPlanForm()">➕</button>
+                </div>
+
+                <div id="plansSummary" class="plans-summary">
+                    <div class="plan-stats">
+                        <div class="stat-block">
+                            <div class="stat-label">Запланировано</div>
+                            <div class="stat-value" id="totalPlanned">0 ₽</div>
+                        </div>
+                        <div class="stat-block">
+                            <div class="stat-label">Выполнено</div>
+                            <div class="stat-value" id="totalCompleted">0 ₽</div>
+                        </div>
+                        <div class="stat-block">
+                            <div class="stat-label">Осталось</div>
+                            <div class="stat-value" id="totalRemaining">0 ₽</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="plansList" class="plans-list"></div>
+                <button class="btn btn-small" onclick="showPlanForm()" style="margin-top: 10px;">➕ Добавить план</button>
+            </div>
+
+            <!-- Статистика по планам -->
+            <div class="card">
+                <div class="card-title">📊 Статистика выполнения</div>
+                <div id="plansChartContainer" style="height: 200px;">
+                    <canvas id="plansChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопка сброса (внизу) -->
         <div class="card" style="margin-top: 20px;">
             <div class="card-title">⚙️ Настройки</div>
             <button class="btn btn-small btn-danger" onclick="resetAllData()">🗑️ Сбросить все данные</button>
@@ -229,9 +273,8 @@
                         <option value="gifts">🎁 Подарки</option>
                         <option value="investments">📈 Инвестиции</option>
                         <option value="freelance">💻 Фриланс</option>
-                        <option value="other">💰 Другое</option>
                     </optgroup>
-                    <optgroup label="Расходы" id="expenseCategories" style="display: none;">
+                    <optgroup label="Расходы" id="expenseCategories">
                         <option value="food">🍔 Еда</option>
                         <option value="housing">🏠 Жилье</option>
                         <option value="transport">🚗 Транспорт</option>
@@ -243,7 +286,6 @@
                         <option value="communication">📱 Связь</option>
                         <option value="gifts_expense">🎁 Подарки</option>
                         <option value="work">💼 Работа</option>
-                        <option value="other_expense">💰 Другое</option>
                     </optgroup>
                 </select>
             </div>
@@ -351,78 +393,57 @@
         </div>
     </div>
 
-    <!-- JavaScript -->
-    <script src="script.js"></script>
-    <!-- Модальное окно начального баланса -->
-        <div id="initialBalanceModal" class="initial-balance-modal" style="display: none;">
-            <div class="initial-balance-content">
-                <div class="initial-balance-icon">💰</div>
-                <div class="initial-balance-title">Добро пожаловать!</div>
-                <div class="initial-balance-subtitle">Установите начальный баланс вашего счета</div>
-                <input type="number" id="initialBalanceInput" class="initial-balance-input" placeholder="0" step="0.01">
-                <button class="initial-balance-button" onclick="setInitialBalanceFromModal()">Начать учет</button>
-                <div class="initial-balance-skip" onclick="skipInitialBalance()">Пропустить</div>
-            </div>
-        </div>
     <!-- Форма создания категории -->
-        <div id="categoryForm" class="form-modal" style="display: none;">
-            <div class="form-header">
-                <h2>➕ Новая категория</h2>
-                <button class="close-btn" onclick="hideCategoryForm()">✖</button>
+    <div id="categoryForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>➕ Новая категория</h2>
+            <button class="close-btn" onclick="hideCategoryForm()">✖</button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-group">
+                <label>Тип категории</label>
+                <select id="categoryType" onchange="updateEmojiList()">
+                    <option value="income">💰 Доход</option>
+                    <option value="expense">💸 Расход</option>
+                </select>
             </div>
 
-            <div class="form-body">
-                <div class="form-group">
-                    <label>Тип категории</label>
-                    <select id="categoryType" onchange="updateEmojiList()">
-                        <option value="income">💰 Доход</option>
-                        <option value="expense">💸 Расход</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Название категории</label>
-                    <input type="text" id="categoryName" placeholder="Например: Такси, Кафе, Аптека">
-                </div>
-
-                <div class="form-group">
-                    <label>Категория эмодзи</label>
-                    <select id="emojiCategory" onchange="updateEmojiList()">
-                        <option value="all">Все</option>
-                        <option value="food">🍔 Еда и напитки</option>
-                        <option value="transport">🚗 Транспорт</option>
-                        <option value="shopping">🛍️ Покупки</option>
-                        <option value="home">🏠 Дом и семья</option>
-                        <option value="health">💊 Здоровье</option>
-                        <option value="entertainment">🎮 Развлечения</option>
-                        <option value="education">📚 Образование</option>
-                        <option value="work">💼 Работа</option>
-                        <option value="sports">⚽ Спорт</option>
-                        <option value="travel">✈️ Путешествия</option>
-                        <option value="pets">🐶 Животные</option>
-                        <option value="gifts">🎁 Подарки</option>
-                        <option value="finance">💰 Финансы</option>
-                        <option value="tech">💻 Технологии</option>
-                        <option value="other">✨ Другое</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Выберите эмодзи</label>
-                    <div id="emojiGrid" class="emoji-grid">
-                        <!-- Эмодзи будут загружаться сюда -->
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Цвет категории</label>
-                    <input type="color" id="categoryColor" value="#40a7e3">
-                </div>
+            <div class="form-group">
+                <label>Название категории</label>
+                <input type="text" id="categoryName" placeholder="Например: Такси, Кафе, Аптека">
             </div>
 
-            <div class="form-footer">
-                <button class="btn btn-primary" onclick="saveCategory()">✅ Сохранить</button>
-                <button class="btn btn-secondary" onclick="hideCategoryForm()">❌ Отмена</button>
+            <div class="form-group">
+                <label>Категория эмодзи</label>
+                <select id="emojiCategory" onchange="updateEmojiList()">
+                    <option value="all">Все</option>
+                    <option value="food">🍔 Еда и напитки</option>
+                    <option value="transport">🚗 Транспорт</option>
+                    <option value="shopping">🛍️ Покупки</option>
+                    <option value="home">🏠 Дом и семья</option>
+                    <option value="health">💊 Здоровье</option>
+                    <option value="entertainment">🎮 Развлечения</option>
+                    <option value="education">📚 Образование</option>
+                    <option value="work">💼 Работа</option>
+                    <option value="sports">⚽ Спорт</option>
+                    <option value="travel">✈️ Путешествия</option>
+                    <option value="pets">🐶 Животные</option>
+                    <option value="gifts">🎁 Подарки</option>
+                    <option value="finance">💰 Финансы</option>
+                    <option value="tech">💻 Технологии</option>
+                    <option value="other">✨ Другое</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Выберите эмодзи</label>
+                <div id="emojiGrid" class="emoji-grid"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Цвет категории</label>
+                <input type="color" id="categoryColor" value="#40a7e3">
             </div>
         </div>
 
@@ -431,5 +452,81 @@
             <button class="btn btn-secondary" onclick="hideCategoryForm()">❌ Отмена</button>
         </div>
     </div>
+
+    <!-- Форма плана расходов -->
+    <div id="planForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>📋 Новый план расходов</h2>
+            <button class="close-btn" onclick="hidePlanForm()">✖</button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-group">
+                <label>Название</label>
+                <input type="text" id="planName" placeholder="Продукты на неделю">
+            </div>
+
+            <div class="form-group">
+                <label>Сумма (₽)</label>
+                <input type="number" id="planAmount" placeholder="5000" step="0.01">
+            </div>
+
+            <div class="form-group">
+                <label>Категория</label>
+                <select id="planCategory">
+                    <option value="food">🍔 Еда</option>
+                    <option value="housing">🏠 Жилье</option>
+                    <option value="transport">🚗 Транспорт</option>
+                    <option value="clothes">👕 Одежда</option>
+                    <option value="health">💊 Здоровье</option>
+                    <option value="entertainment">🎮 Развлечения</option>
+                    <option value="education">📚 Образование</option>
+                    <option value="pets">🐶 Животные</option>
+                    <option value="communication">📱 Связь</option>
+                    <option value="gifts_expense">🎁 Подарки</option>
+                    <option value="work">💼 Работа</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Дата</label>
+                <input type="date" id="planDate">
+            </div>
+
+            <div class="form-group">
+                <label>Повторение</label>
+                <select id="planRecurring">
+                    <option value="false">Одноразово</option>
+                    <option value="weekly">Каждую неделю</option>
+                    <option value="monthly">Каждый месяц</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Счет списания</label>
+                <select id="planAccount"></select>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="savePlan()">✅ Сохранить план</button>
+            <button class="btn btn-secondary" onclick="hidePlanForm()">❌ Отмена</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно начального баланса -->
+    <div id="initialBalanceModal" class="initial-balance-modal" style="display: none;">
+        <div class="initial-balance-content">
+            <div class="initial-balance-icon">💰</div>
+            <div class="initial-balance-title">Добро пожаловать!</div>
+            <div class="initial-balance-subtitle">Установите начальный баланс вашего счета</div>
+            <input type="number" id="initialBalanceInput" class="initial-balance-input" placeholder="0" step="0.01">
+            <button class="initial-balance-button" onclick="setInitialBalanceFromModal()">Начать учет</button>
+            <div class="initial-balance-skip" onclick="skipInitialBalance()">Пропустить</div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
 </body>
 </html>

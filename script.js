@@ -1739,3 +1739,197 @@ function deleteCategory(categoryId) {
     updateCategorySelector();
     saveData();
 }
+
+// Переменная для текущей вкладки
+let currentTab = 'main';
+
+// Переключение вкладок
+function switchTab(tab) {
+    currentTab = tab;
+
+    // Обновляем активную кнопку
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.getElementById(`tab-${tab}`).classList.add('active');
+
+    // Показываем нужный контент
+    document.getElementById('main-content').style.display = tab === 'main' ? 'block' : 'none';
+    document.getElementById('analytics-content').style.display = tab === 'analytics' ? 'block' : 'none';
+    document.getElementById('plans-content').style.display = tab === 'plans' ? 'block' : 'none';
+
+    // Обновляем данные при переключении
+    if (tab === 'analytics') {
+        updateCharts();
+        updateCategorySelector();
+    } else if (tab === 'plans') {
+        updatePlans();
+        updatePlansChart();
+    }
+}
+
+// Обновленная функция updateBudgetUI (для обеих вкладок)
+function updateBudgetUI() {
+    if (appState.budget > 0) {
+        const now = new Date();
+        const monthExpenses = appState.transactions.filter(t => {
+            const tDate = new Date(t.date);
+            return t.type === 'expense' && tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
+        }).reduce((sum, t) => sum + t.amount, 0);
+        const percent = Math.min((monthExpenses / appState.budget) * 100, 100);
+
+        // Обновляем оба прогресс-бара
+        const bar = document.getElementById('budgetBar');
+        const barDetailed = document.getElementById('budgetBarDetailed');
+        const spentEl = document.getElementById('spentAmount');
+        const spentDetailed = document.getElementById('spentAmountDetailed');
+        const budgetEl = document.getElementById('budgetAmount');
+        const budgetDetailed = document.getElementById('budgetAmountDetailed');
+
+        if (bar) bar.style.width = percent + '%';
+        if (barDetailed) barDetailed.style.width = percent + '%';
+        if (spentEl) spentEl.textContent = formatMoney(monthExpenses);
+        if (spentDetailed) spentDetailed.textContent = formatMoney(monthExpenses);
+        if (budgetEl) budgetEl.textContent = formatMoney(appState.budget);
+        if (budgetDetailed) budgetDetailed.textContent = formatMoney(appState.budget);
+    }
+}
+
+// Новая функция для графика выполнения планов
+let plansChart = null;
+
+function updatePlansChart() {
+    const canvas = document.getElementById('plansChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const now = new Date();
+    const monthPlans = appState.plans?.filter(p => {
+        const planDate = new Date(p.date);
+        return planDate.getMonth() === now.getMonth() && planDate.getFullYear() === now.getFullYear();
+    }) || [];
+
+    const completed = monthPlans.filter(p => p.completed).reduce((sum, p) => sum + p.amount, 0);
+    const pending = monthPlans.filter(p => !p.completed).reduce((sum, p) => sum + p.amount, 0);
+
+    if (plansChart) plansChart.destroy();
+
+    plansChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Выполнено', 'Ожидает'],
+            datasets: [{
+                data: [completed, pending],
+                backgroundColor: ['#4CAF50', '#FFC107'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// Обновляем функцию updatePlans
+function updatePlans() {
+    if (!appState.plans) appState.plans = [];
+    const plansList = document.getElementById('plansList');
+    if (!plansList) return;
+
+    const sortedPlans = [...appState.plans].sort((a, b) => {
+        if (a.completed && !b.completed) return 1;
+        if (!a.completed && b.completed) return -1;
+        return new Date(a.date) - new Date(b.date);
+    });
+
+    plansList.innerHTML = sortedPlans.map(plan => {
+        const account = appState.accounts.find(a => a.id === plan.accountId);
+        const isOverdue = !plan.completed && new Date(plan.date) < new Date();
+        const dateStr = new Date(plan.date).toLocaleDateString('ru-RU');
+        return `
+            <div class="plan-item ${plan.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}">
+                <input type="checkbox" class="plan-checkbox" ${plan.completed ? 'checked' : ''} onchange="togglePlanComplete('${plan.id}', this.checked)">
+                <div class="plan-info">
+                    <div class="plan-name">${plan.name} ${plan.recurring ? `<span class="plan-recurring">${plan.recurring === 'weekly' ? 'Каждую неделю' : 'Каждый месяц'}</span>` : ''}</div>
+                    <div class="plan-details">
+                        <span class="plan-amount">${formatMoney(plan.amount)}</span>
+                        <span class="plan-category">${getCategoryName(plan.category)}</span>
+                        <span class="plan-date ${isOverdue ? 'overdue' : ''}">📅 ${dateStr} ${isOverdue ? '(просрочено)' : ''}</span>
+                        ${account ? `<span>${account.icon} ${account.name}</span>` : ''}
+                    </div>
+                </div>
+                <div class="plan-actions">
+                    <button onclick="editPlan('${plan.id}')">✏️</button>
+                    <button onclick="deletePlan('${plan.id}')">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    updatePlansSummary();
+    if (currentTab === 'plans') {
+        updatePlansChart();
+    }
+}
+
+// Обновляем функцию updatePlansSummary
+function updatePlansSummary() {
+    if (!appState.plans) return;
+    let totalPlanned = 0, totalCompleted = 0;
+    appState.plans.forEach(plan => {
+        if (!plan.completed) totalPlanned += plan.amount;
+        else totalCompleted += plan.amount;
+    });
+
+    const plannedEl = document.getElementById('totalPlanned');
+    const completedEl = document.getElementById('totalCompleted');
+    const remainingEl = document.getElementById('totalRemaining');
+
+    if (plannedEl) plannedEl.textContent = formatMoney(totalPlanned);
+    if (completedEl) completedEl.textContent = formatMoney(totalCompleted);
+    if (remainingEl) remainingEl.textContent = formatMoney(totalPlanned);
+}
+
+// Обновляем функцию updateUI
+function updateUI() {
+    const activeAccount = appState.accounts.find(a => a.id === appState.activeAccount);
+    if (activeAccount) document.getElementById('balance').textContent = formatMoney(activeAccount.balance);
+
+    if (currentTab === 'main') {
+        updateStatsByPeriod();
+    } else if (currentTab === 'analytics') {
+        updateStatsByPeriod();
+        updateCharts();
+    } else if (currentTab === 'plans') {
+        updatePlans();
+    }
+
+    updateBudgetUI();
+    updateAccountsSummary();
+}
+
+// Обновляем функцию loadData
+function loadData() {
+    const saved = localStorage.getItem('financeData');
+    if (saved) {
+        try {
+            appState = JSON.parse(saved);
+            if (!appState.plans) appState.plans = [];
+            if (!appState.customCategories) {
+                appState.customCategories = { income: [], expense: [] };
+            }
+        } catch (e) {
+            console.log('Ошибка загрузки');
+        }
+    }
+    initializeAccounts();
+    updateCategorySelector();
+    updateUI();
+    setTimeout(checkFirstLaunch, 500);
+}
