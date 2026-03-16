@@ -2239,3 +2239,34 @@ function updateStatsByPeriod() {
 
 // Удаляем функции для других графиков (updateDailyChart, updateBalanceChart)
 // или просто закомментируй их вызовы
+// Добавь в конец файла script.js
+
+// Простая проверка обновлений
+async function checkForUpdates() {
+    // Если есть новая версия service worker, обновляем
+    if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+            registration.update();
+        }
+    }
+}
+
+// Проверяем каждые 30 минут
+setInterval(checkForUpdates, 30 * 60 * 1000);
+
+// Проверяем когда приложение становится активным
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        checkForUpdates();
+    }
+});
+
+// Принудительное обновление при ошибках
+window.addEventListener('error', () => {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(reg => {
+            if (reg) reg.unregister().then(() => window.location.reload());
+        });
+    }
+});
