@@ -61,6 +61,7 @@ let appState = {
 let categoriesChart = null;
 let dailyChart = null;
 let balanceChart = null;
+let plansChart = null;
 let currentChart = 'categories';
 let currentCurrency = 'RUB';
 let currentType = 'income';
@@ -68,6 +69,10 @@ let currentPeriod = 'month';
 let customStartDate = null;
 let customEndDate = null;
 let currentCategoryType = 'expense';
+let selectedEmoji = '💰';
+let currentTab = 'main';
+let selectedAnalysisCategory = null;
+
 // Данные для эмодзи по категориям
 const emojiData = {
     all: ['🍔', '🍕', '🍣', '🍜', '🍝', '🍱', '🍛', '🍙', '🍚', '🍘', '🍢', '🍡', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '☕', '🍵', '🥤', '🧃', '🧋', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🛵', '🏍️', '🚲', '🛴', '🚦', '🚧', '⛽', '🅿️', '🚉', '🚇', '✈️', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛳️', '⛴️', '🚢', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🗼', '⛲', '🌲', '🌳', '🌴', '🌵', '🌿', '🍀', '🍃', '🌱', '💊', '💉', '🩺', '🏥', '🤒', '🤕', '😷', '🤧', '🤮', '💪', '🦵', '🦶', '👂', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '🎮', '🎲', '🎯', '🎳', '🎰', '🎪', '🎨', '🎭', '🎤', '🎧', '🎸', '🎹', '🎺', '🎻', '🥁', '🎬', '📚', '📖', '📕', '📗', '📘', '📙', '📔', '📒', '📃', '📜', '📄', '📰', '🎓', '✏️', '✒️', '🖊️', '🖋️', '🖌️', '🖍️', '📝', '💼', '👔', '👕', '👖', '👗', '👘', '👙', '👚', '👛', '👜', '👝', '🎒', '👞', '👟', '👠', '👡', '👢', '👑', '👒', '🎩', '🎓', '🧢', '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎳', '🏏', '🏑', '🏒', '🏓', '🏸', '🥊', '🥋', '⛸️', '🎿', '⛷️', '🏂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘', '✈️', '🌍', '🌎', '🌏', '🗺️', '🧳', '⛱️', '🏖️', '🏝️', '🏜️', '🏔️', '⛰️', '🌋', '🏞️', '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐙', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🐢', '🐍', '🦎', '🐟', '🐠', '🐡', '🐬', '🐳', '🐋', '🦈', '🎁', '🎀', '🎊', '🎉', '🎈', '🪅', '🎎', '🎏', '🎐', '🧧', '💰', '💵', '💴', '💶', '💷', '💳', '💎', '⚖️', '📊', '📈', '📉', '💻', '🖥️', '💽', '💾', '💿', '📀', '📱', '📲', '☎️', '📞', '📟', '📠', '📺', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📼', '🔊', '📢', '📣', '🔔', '🎵', '🎶', '🎙️', '🎚️', '🎛️', '🎧', '📻', '🪄', '✨', '🌟', '⭐', '🌠', '⏰', '⌛', '📅', '📆', '🗓️', '🔒', '🔓', '🔑', '🗝️', '🔨', '🪛', '🔧', '🔩', '⚙️', '🧰', '🧲', '🔬', '🔭', '📡', '💡', '🔦', '🏮', '🪔', '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃', '📜', '📄', '📰', '🗞️', '📑', '🔖', '🏷️', '💰', '🪙', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️'],
@@ -102,8 +107,6 @@ const emojiData = {
 
     other: ['✨', '🌟', '⭐', '🌠', '⏰', '⌛', '📅', '📆', '🗓️', '🔒', '🔓', '🔑', '🗝️', '🔨', '🪛', '🔧', '🔩', '⚙️', '🧰', '🧲', '🔬', '🔭', '📡', '💡', '🔦', '🏮', '🪔']
 };
-
-let selectedEmoji = '💰';
 
 const exchangeRates = {
     'RUB': 1,
@@ -140,44 +143,13 @@ saveData = function() {
 
 window.saveData = saveData;
 
+// ===== ОСНОВНЫЕ ФУНКЦИИ =====
+
 function formatMoney(amount) {
     let value = amount * exchangeRates[currentCurrency];
     if (currentCurrency === 'RUB') return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';
     if (currentCurrency === 'USD') return '$' + value.toFixed(2);
     return '€' + value.toFixed(2);
-}
-
-function getCategoryName(category) {
-    // Проверяем пользовательские категории
-    if (appState.customCategories) {
-        for (let type of ['income', 'expense']) {
-            const found = appState.customCategories[type]?.find(c => c.id === category);
-            if (found) return `${found.icon} ${found.name}`;
-        }
-    }
-
-    const categories = {
-        'salary': '💼 Зарплата',
-        'gifts': '🎁 Подарки',
-        'investments': '📈 Инвестиции',
-        'freelance': '💻 Фриланс',
-        'food': '🍔 Еда',
-        'housing': '🏠 Жилье',
-        'transport': '🚗 Транспорт',
-        'clothes': '👕 Одежда',
-        'health': '💊 Здоровье',
-        'entertainment': '🎮 Развлечения',
-        'education': '📚 Образование',
-        'pets': '🐶 Животные',
-        'communication': '📱 Связь',
-        'gifts_expense': '🎁 Подарки',
-        'work': '💼 Работа',
-        'initial': '💰 Начальный баланс',
-        'transfer': '🔄 Перевод',
-        'other': '💰 Другое',
-        'other_expense': '💰 Другое'
-    };
-    return categories[category] || category;
 }
 
 function saveData() {
@@ -198,7 +170,8 @@ function loadData() {
         }
     }
     initializeAccounts();
-    updateCategorySelector();
+    updateCategorySelector(); // для форм
+    updateAnalyticsCategorySelector(); // для аналитики
     updateUI();
     setTimeout(checkFirstLaunch, 500);
 }
@@ -323,10 +296,18 @@ function updateAccountStats() {
 function updateUI() {
     const activeAccount = appState.accounts.find(a => a.id === appState.activeAccount);
     if (activeAccount) document.getElementById('balance').textContent = formatMoney(activeAccount.balance);
-    updateStatsByPeriod();
+
+    if (currentTab === 'main') {
+        updateStatsByPeriod();
+    } else if (currentTab === 'analytics') {
+        updateStatsByPeriod();
+        updateCharts();
+    } else if (currentTab === 'plans') {
+        updatePlans();
+    }
+
     updateBudgetUI();
-    updateCharts();
-    updatePlans();
+    updateAccountsSummary();
 }
 
 function updateBudgetUI() {
@@ -337,14 +318,21 @@ function updateBudgetUI() {
             return t.type === 'expense' && tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
         }).reduce((sum, t) => sum + t.amount, 0);
         const percent = Math.min((monthExpenses / appState.budget) * 100, 100);
+
+        // Обновляем оба прогресс-бара
         const bar = document.getElementById('budgetBar');
-        if (bar) {
-            bar.style.width = percent + '%';
-        }
+        const barDetailed = document.getElementById('budgetBarDetailed');
         const spentEl = document.getElementById('spentAmount');
+        const spentDetailed = document.getElementById('spentAmountDetailed');
         const budgetEl = document.getElementById('budgetAmount');
+        const budgetDetailed = document.getElementById('budgetAmountDetailed');
+
+        if (bar) bar.style.width = percent + '%';
+        if (barDetailed) barDetailed.style.width = percent + '%';
         if (spentEl) spentEl.textContent = formatMoney(monthExpenses);
+        if (spentDetailed) spentDetailed.textContent = formatMoney(monthExpenses);
         if (budgetEl) budgetEl.textContent = formatMoney(appState.budget);
+        if (budgetDetailed) budgetDetailed.textContent = formatMoney(appState.budget);
     }
 }
 
@@ -367,103 +355,128 @@ function showChart(type) {
 
 function updateCharts() {
     updateCategoriesChart();
-    updateDailyChart();
-    updateBalanceChart();
     updateTotals();
+
+    // Если выбрана категория, обновляем её данные
+    if (selectedAnalysisCategory) {
+        updateCategoryAnalysis();
+    }
 }
 
 function updateCategoriesChart() {
     const canvas = document.getElementById('categoriesChart');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const { startDate, endDate } = getPeriodDates();
+
     const expensesByCategory = {};
+
     appState.transactions.forEach(t => {
-        if (t.type === 'expense' && new Date(t.date) >= monthAgo) {
-            const catName = getCategoryName(t.category);
-            expensesByCategory[catName] = (expensesByCategory[catName] || 0) + t.amount;
+        if (t.type === 'expense') {
+            const tDate = new Date(t.date);
+            if (tDate >= startDate && tDate <= endDate) {
+                const catName = getCategoryName(t.category);
+                expensesByCategory[catName] = (expensesByCategory[catName] || 0) + t.amount;
+            }
         }
     });
-    if (Object.keys(expensesByCategory).length === 0) expensesByCategory['Нет данных'] = 1;
+
+    if (Object.keys(expensesByCategory).length === 0) {
+        expensesByCategory['Нет данных'] = 1;
+    }
+
     if (categoriesChart) categoriesChart.destroy();
+
     categoriesChart = new Chart(ctx, {
         type: 'pie',
         data: {
             labels: Object.keys(expensesByCategory),
             datasets: [{
                 data: Object.values(expensesByCategory),
-                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                    '#FF9F40', '#FF6384', '#C9CBCF', '#7BC8A4', '#E7B9FF'
+                ]
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${formatMoney(value)} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const categoryName = categoriesChart.data.labels[index];
+
+                    // Находим ID категории по имени
+                    let categoryId = null;
+
+                    // Ищем в стандартных категориях
+                    const standardCategories = {
+                        '🍔 Еда': 'food',
+                        '🏠 Жилье': 'housing',
+                        '🚗 Транспорт': 'transport',
+                        '👕 Одежда': 'clothes',
+                        '💊 Здоровье': 'health',
+                        '🎮 Развлечения': 'entertainment',
+                        '📚 Образование': 'education',
+                        '🐶 Животные': 'pets',
+                        '📱 Связь': 'communication',
+                        '🎁 Подарки': 'gifts_expense',
+                        '💼 Работа': 'work'
+                    };
+
+                    if (standardCategories[categoryName]) {
+                        categoryId = standardCategories[categoryName];
+                    } else {
+                        // Ищем в пользовательских
+                        for (const type of ['expense']) {
+                            const found = appState.customCategories?.[type]?.find(c =>
+                                `${c.icon} ${c.name}` === categoryName
+                            );
+                            if (found) {
+                                categoryId = found.id;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (categoryId) {
+                        // Выбираем категорию в селекторе
+                        const selector = document.getElementById('categorySelector');
+                        selector.value = categoryId;
+                        selectCategoryForAnalysis();
+                    }
+                }
+            }
+        }
     });
 }
 
 function updateDailyChart() {
-    const canvas = document.getElementById('dailyChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const labels = [], incomeData = [], expenseData = [];
-    for (let i = 6; i >= 0; i--) {
-        const date = new Date(); date.setDate(date.getDate() - i);
-        labels.push(date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }));
-        let dayIncome = 0, dayExpense = 0;
-        appState.transactions.forEach(t => {
-            if (new Date(t.date).toDateString() === date.toDateString()) {
-                if (t.type === 'income') dayIncome += t.amount;
-                else dayExpense += t.amount;
-            }
-        });
-        incomeData.push(dayIncome);
-        expenseData.push(dayExpense);
-    }
-    if (dailyChart) dailyChart.destroy();
-    dailyChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'Доходы', data: incomeData, backgroundColor: '#4CAF50' },
-                { label: 'Расходы', data: expenseData, backgroundColor: '#F44336' }
-            ]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+    // Эта функция больше не используется, оставлена для совместимости
+    console.log('updateDailyChart вызван (заглушка)');
 }
 
 function updateBalanceChart() {
-    const canvas = document.getElementById('balanceChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const labels = [], balanceData = [];
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date(); date.setDate(date.getDate() - i);
-        labels.push(date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }));
-        let runningBalance = 0;
-        appState.transactions.forEach(t => {
-            if (new Date(t.date) <= date) {
-                if (t.type === 'income') runningBalance += t.amount;
-                else runningBalance -= t.amount;
-            }
-        });
-        balanceData.push(runningBalance);
-    }
-    if (balanceChart) balanceChart.destroy();
-    balanceChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Баланс',
-                data: balanceData,
-                borderColor: '#40A7E3',
-                backgroundColor: 'rgba(64, 167, 227, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+    // Эта функция больше не используется, оставлена для совместимости
+    console.log('updateBalanceChart вызван (заглушка)');
 }
 
 function updateTotals() {
@@ -913,6 +926,9 @@ function updatePlans() {
     }).join('');
 
     updatePlansSummary();
+    if (currentTab === 'plans') {
+        updatePlansChart();
+    }
 }
 
 function updatePlansSummary() {
@@ -1094,6 +1110,8 @@ function skipInitialBalance() {
     hideInitialBalanceModal();
 }
 
+// ===== ФУНКЦИИ ДЛЯ КАТЕГОРИЙ =====
+
 function showCategoryForm() {
     const app = document.getElementById('app');
     const form = document.getElementById('categoryForm');
@@ -1107,6 +1125,8 @@ function showCategoryForm() {
     if (nameInput) nameInput.value = '';
     if (iconInput) iconInput.value = '📌';
     if (colorInput) colorInput.value = '#40a7e3';
+    selectedEmoji = '💰';
+    updateEmojiList();
 }
 
 function hideCategoryForm() {
@@ -1119,14 +1139,12 @@ function hideCategoryForm() {
 function saveCategory() {
     const typeSelect = document.getElementById('categoryType');
     const nameInput = document.getElementById('categoryName');
-    const iconInput = document.getElementById('categoryIcon');
     const colorInput = document.getElementById('categoryColor');
 
-    if (!typeSelect || !nameInput || !iconInput || !colorInput) return;
+    if (!typeSelect || !nameInput || !colorInput) return;
 
     const type = typeSelect.value;
     const name = nameInput.value;
-    const icon = iconInput.value;
     const color = colorInput.value;
 
     if (!name) {
@@ -1141,12 +1159,14 @@ function saveCategory() {
     const newCategory = {
         id: 'cat_' + Date.now(),
         name: name,
-        icon: icon || '📌',
+        icon: selectedEmoji,
         color: color,
         type: type
     };
 
     appState.customCategories[type].push(newCategory);
+
+    // Обновляем селектор категорий
     updateCategorySelector();
     updateCategoriesList();
     saveData();
@@ -1163,11 +1183,12 @@ function updateCategorySelector() {
     const expenseOptgroup = document.getElementById('expenseCategories');
 
     if (incomeOptgroup) {
-        // Очищаем, но оставляем стандартные
-        while (incomeOptgroup.children.length > 5) {
+        // Оставляем основные категории доходов
+        while (incomeOptgroup.children.length > 4) {
             incomeOptgroup.removeChild(incomeOptgroup.lastChild);
         }
 
+        // Добавляем пользовательские категории доходов
         if (appState.customCategories?.income) {
             appState.customCategories.income.forEach(cat => {
                 const option = document.createElement('option');
@@ -1179,11 +1200,12 @@ function updateCategorySelector() {
     }
 
     if (expenseOptgroup) {
-        // Очищаем, но оставляем стандартные
-        while (expenseOptgroup.children.length > 12) {
+        // Оставляем основные категории расходов
+        while (expenseOptgroup.children.length > 11) {
             expenseOptgroup.removeChild(expenseOptgroup.lastChild);
         }
 
+        // Добавляем пользовательские категории расходов
         if (appState.customCategories?.expense) {
             appState.customCategories.expense.forEach(cat => {
                 const option = document.createElement('option');
@@ -1192,6 +1214,138 @@ function updateCategorySelector() {
                 expenseOptgroup.appendChild(option);
             });
         }
+    }
+}
+
+function updateAnalyticsCategorySelector() {
+    const selector = document.getElementById('categorySelector');
+    if (!selector) return;
+
+    selector.innerHTML = '<option value="">Все категории</option>';
+
+    // Стандартные категории расходов
+    const standardCategories = {
+        'food': '🍔 Еда',
+        'housing': '🏠 Жилье',
+        'transport': '🚗 Транспорт',
+        'clothes': '👕 Одежда',
+        'health': '💊 Здоровье',
+        'entertainment': '🎮 Развлечения',
+        'education': '📚 Образование',
+        'pets': '🐶 Животные',
+        'communication': '📱 Связь',
+        'gifts_expense': '🎁 Подарки',
+        'work': '💼 Работа'
+    };
+
+    Object.entries(standardCategories).forEach(([id, name]) => {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = name;
+        selector.appendChild(option);
+    });
+
+    // Добавляем пользовательские категории расходов
+    if (appState.customCategories?.expense) {
+        appState.customCategories.expense.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = `${cat.icon} ${cat.name}`;
+            selector.appendChild(option);
+        });
+    }
+}
+
+function selectCategoryForAnalysis() {
+    const selector = document.getElementById('categorySelector');
+    const categoryId = selector.value;
+
+    if (!categoryId) {
+        document.getElementById('categoryAnalysisInfo').style.display = 'none';
+        document.getElementById('categoryTransactionsCard').style.display = 'none';
+        selectedAnalysisCategory = null;
+        updateCharts();
+        return;
+    }
+
+    selectedAnalysisCategory = categoryId;
+
+    // Получаем название категории
+    let categoryName = '';
+    let categoryIcon = '📊';
+
+    const standardCategories = {
+        'food': '🍔 Еда',
+        'housing': '🏠 Жилье',
+        'transport': '🚗 Транспорт',
+        'clothes': '👕 Одежда',
+        'health': '💊 Здоровье',
+        'entertainment': '🎮 Развлечения',
+        'education': '📚 Образование',
+        'pets': '🐶 Животные',
+        'communication': '📱 Связь',
+        'gifts_expense': '🎁 Подарки',
+        'work': '💼 Работа'
+    };
+
+    if (standardCategories[categoryId]) {
+        categoryName = standardCategories[categoryId];
+        categoryIcon = categoryName.split(' ')[0];
+    } else {
+        for (const type of ['expense']) {
+            const found = appState.customCategories?.[type]?.find(c => c.id === categoryId);
+            if (found) {
+                categoryName = found.name;
+                categoryIcon = found.icon;
+                break;
+            }
+        }
+    }
+
+    document.getElementById('selectedCategoryIcon').textContent = categoryIcon;
+    document.getElementById('selectedCategoryName').textContent = categoryName;
+    document.getElementById('categoryAnalysisInfo').style.display = 'block';
+
+    updateCategoryAnalysis();
+}
+
+function updateCategoryAnalysis() {
+    if (!selectedAnalysisCategory) return;
+
+    const { startDate, endDate } = getPeriodDates();
+
+    const categoryTransactions = appState.transactions.filter(t => {
+        if (t.type !== 'expense') return false;
+        if (t.category !== selectedAnalysisCategory) return false;
+        const tDate = new Date(t.date);
+        return tDate >= startDate && tDate <= endDate;
+    });
+
+    const total = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
+    document.getElementById('selectedCategoryTotal').textContent = formatMoney(total);
+
+    if (categoryTransactions.length > 0) {
+        document.getElementById('categoryTransactionsCard').style.display = 'block';
+        document.getElementById('categoryTransactionCount').textContent =
+            `${categoryTransactions.length} операций`;
+
+        const list = document.getElementById('categoryTransactionsList');
+        list.innerHTML = categoryTransactions
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .map(t => {
+                const date = new Date(t.date).toLocaleDateString('ru-RU');
+                return `
+                    <div class="transaction-item">
+                        <div>
+                            <div class="transaction-date">${date}</div>
+                            <div class="transaction-desc">${t.description || '—'}</div>
+                        </div>
+                        <div class="transaction-amount">${formatMoney(t.amount)}</div>
+                    </div>
+                `;
+            }).join('');
+    } else {
+        document.getElementById('categoryTransactionsCard').style.display = 'none';
     }
 }
 
@@ -1239,6 +1393,7 @@ function getCategoriesHTML(type) {
                     ${cat.icon}
                 </div>
                 <span class="category-name">${cat.name}</span>
+                <span class="category-type-badge">${type === 'income' ? '💰' : '💸'}</span>
             </div>
             <div class="category-actions">
                 <button onclick="editCategory('${cat.id}')">✏️</button>
@@ -1250,13 +1405,11 @@ function getCategoriesHTML(type) {
 
 function editCategory(categoryId) {
     let category = null;
-    let categoryType = null;
 
     for (const type of ['income', 'expense']) {
         const found = appState.customCategories?.[type]?.find(c => c.id === categoryId);
         if (found) {
             category = found;
-            categoryType = type;
             break;
         }
     }
@@ -1268,6 +1421,7 @@ function editCategory(categoryId) {
         category.name = newName;
         updateCategoriesList();
         updateCategorySelector();
+        updateAnalyticsCategorySelector();
         saveData();
     }
 }
@@ -1283,8 +1437,42 @@ function deleteCategory(categoryId) {
 
     updateCategoriesList();
     updateCategorySelector();
+    updateAnalyticsCategorySelector();
     saveData();
 }
+
+function getCategoryName(category) {
+    // Сначала проверяем пользовательские категории
+    if (appState.customCategories) {
+        for (let type of ['income', 'expense']) {
+            const found = appState.customCategories[type]?.find(c => c.id === category);
+            if (found) return `${found.icon} ${found.name}`;
+        }
+    }
+
+    const categories = {
+        'salary': '💼 Зарплата',
+        'gifts': '🎁 Подарки',
+        'investments': '📈 Инвестиции',
+        'freelance': '💻 Фриланс',
+        'food': '🍔 Еда',
+        'housing': '🏠 Жилье',
+        'transport': '🚗 Транспорт',
+        'clothes': '👕 Одежда',
+        'health': '💊 Здоровье',
+        'entertainment': '🎮 Развлечения',
+        'education': '📚 Образование',
+        'pets': '🐶 Животные',
+        'communication': '📱 Связь',
+        'gifts_expense': '🎁 Подарки',
+        'work': '💼 Работа',
+        'initial': '💰 Начальный баланс',
+        'transfer': '🔄 Перевод'
+    };
+    return categories[category] || category;
+}
+
+// ===== ФУНКЦИИ ДЛЯ ПЕРИОДА =====
 
 function setPeriod(period) {
     currentPeriod = period;
@@ -1405,142 +1593,11 @@ function updateStatsByPeriod() {
     if (todayIncome) todayIncome.textContent = formatMoney(periodIncome);
     if (todayExpense) todayExpense.textContent = formatMoney(periodExpense);
 
-    filterTransactionsByAccount();
-    updateChartsWithFilter(filteredTransactions);
-}
+    updateTotalsWithFilter(filteredTransactions);
 
-function updateChartsWithFilter(transactions) {
-    updateCategoriesChartWithFilter(transactions);
-    updateDailyChartWithFilter(transactions);
-    updateBalanceChartWithFilter(transactions);
-    updateTotalsWithFilter(transactions);
-}
-
-function updateCategoriesChartWithFilter(transactions) {
-    const canvas = document.getElementById('categoriesChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const expensesByCategory = {};
-
-    transactions.forEach(t => {
-        if (t.type === 'expense') {
-            const catName = getCategoryName(t.category);
-            expensesByCategory[catName] = (expensesByCategory[catName] || 0) + t.amount;
-        }
-    });
-
-    if (Object.keys(expensesByCategory).length === 0) expensesByCategory['Нет данных'] = 1;
-    if (categoriesChart) categoriesChart.destroy();
-
-    categoriesChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: Object.keys(expensesByCategory),
-            datasets: [{
-                data: Object.values(expensesByCategory),
-                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-}
-
-function updateDailyChartWithFilter(transactions) {
-    const canvas = document.getElementById('dailyChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const { startDate, endDate } = getPeriodDates();
-
-    if (!startDate || !endDate) return;
-
-    const labels = [];
-    const incomeData = [];
-    const expenseData = [];
-
-    const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-        const dateStr = currentDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-        labels.push(dateStr);
-
-        let dayIncome = 0;
-        let dayExpense = 0;
-
-        transactions.forEach(t => {
-            const tDate = new Date(t.date);
-            if (tDate.toDateString() === currentDate.toDateString()) {
-                if (t.type === 'income') dayIncome += t.amount;
-                else dayExpense += t.amount;
-            }
-        });
-
-        incomeData.push(dayIncome);
-        expenseData.push(dayExpense);
-
-        currentDate.setDate(currentDate.getDate() + 1);
+    if (selectedAnalysisCategory) {
+        updateCategoryAnalysis();
     }
-
-    if (dailyChart) dailyChart.destroy();
-
-    dailyChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'Доходы', data: incomeData, backgroundColor: '#4CAF50' },
-                { label: 'Расходы', data: expenseData, backgroundColor: '#F44336' }
-            ]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-}
-
-function updateBalanceChartWithFilter(transactions) {
-    const canvas = document.getElementById('balanceChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const { startDate, endDate } = getPeriodDates();
-
-    if (!startDate || !endDate) return;
-
-    const labels = [];
-    const balanceData = [];
-
-    let runningBalance = 0;
-    const currentDate = new Date(startDate);
-
-    while (currentDate <= endDate) {
-        const dateStr = currentDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-        labels.push(dateStr);
-
-        transactions.forEach(t => {
-            const tDate = new Date(t.date);
-            if (tDate.toDateString() === currentDate.toDateString()) {
-                if (t.type === 'income') runningBalance += t.amount;
-                else runningBalance -= t.amount;
-            }
-        });
-
-        balanceData.push(runningBalance);
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    if (balanceChart) balanceChart.destroy();
-
-    balanceChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Баланс',
-                data: balanceData,
-                borderColor: '#40A7E3',
-                backgroundColor: 'rgba(64, 167, 227, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
 }
 
 function updateTotalsWithFilter(transactions) {
@@ -1566,293 +1623,33 @@ function updateTotalsWithFilter(transactions) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', loadData);
-
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+function updateChartsWithFilter(transactions) {
+    // Заглушка для совместимости
+    console.log('updateChartsWithFilter вызван');
 }
 
-// Обновление списка эмодзи
-function updateEmojiList() {
-    const emojiCategory = document.getElementById('emojiCategory')?.value || 'all';
-    const grid = document.getElementById('emojiGrid');
-    if (!grid) return;
+// ===== ФУНКЦИИ ДЛЯ ВКЛАДОК =====
 
-    const emojis = emojiData[emojiCategory] || emojiData.all;
-
-    grid.innerHTML = emojis.map(emoji => `
-        <div class="emoji-item ${selectedEmoji === emoji ? 'selected' : ''}"
-             onclick="selectEmoji('${emoji}')">
-            ${emoji}
-        </div>
-    `).join('');
-}
-
-// Выбор эмодзи
-function selectEmoji(emoji) {
-    selectedEmoji = emoji;
-    updateEmojiList();
-}
-
-// Обновленная функция showCategoryForm
-function showCategoryForm() {
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('categoryForm').style.display = 'block';
-
-    // Сбрасываем форму
-    document.getElementById('categoryName').value = '';
-    document.getElementById('categoryColor').value = '#40a7e3';
-    document.getElementById('emojiCategory').value = 'all';
-    selectedEmoji = '💰';
-    updateEmojiList();
-}
-
-// Обновленная функция saveCategory
-function saveCategory() {
-    const type = document.getElementById('categoryType').value;
-    const name = document.getElementById('categoryName').value;
-    const color = document.getElementById('categoryColor').value;
-
-    if (!name) {
-        tg.showAlert('Введите название категории');
-        return;
-    }
-
-    if (!appState.customCategories) {
-        appState.customCategories = { income: [], expense: [] };
-    }
-
-    const newCategory = {
-        id: 'cat_' + Date.now(),
-        name: name,
-        icon: selectedEmoji,
-        color: color,
-        type: type
-    };
-
-    appState.customCategories[type].push(newCategory);
-
-    // Обновляем селектор категорий
-    updateCategorySelector();
-    updateCategoriesList();
-    saveData();
-    hideCategoryForm();
-
-    tg.showAlert(`✅ Категория "${name}" создана`);
-}
-
-// Обновленная функция updateCategorySelector
-function updateCategorySelector() {
-    const categorySelect = document.getElementById('category');
-    if (!categorySelect) return;
-
-    // Очищаем стандартные опции, но оставляем основные
-    const incomeOptgroup = document.getElementById('incomeCategories');
-    const expenseOptgroup = document.getElementById('expenseCategories');
-
-    if (incomeOptgroup) {
-        // Оставляем основные категории доходов (5 штук)
-        while (incomeOptgroup.children.length > 5) {
-            incomeOptgroup.removeChild(incomeOptgroup.lastChild);
-        }
-
-        // Добавляем пользовательские категории доходов
-        if (appState.customCategories?.income) {
-            appState.customCategories.income.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.id;
-                option.textContent = `${cat.icon} ${cat.name}`;
-                incomeOptgroup.appendChild(option);
-            });
-        }
-    }
-
-    if (expenseOptgroup) {
-        // Оставляем основные категории расходов (12 штук)
-        while (expenseOptgroup.children.length > 12) {
-            expenseOptgroup.removeChild(expenseOptgroup.lastChild);
-        }
-
-        // Добавляем пользовательские категории расходов
-        if (appState.customCategories?.expense) {
-            appState.customCategories.expense.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.id;
-                option.textContent = `${cat.icon} ${cat.name}`;
-                expenseOptgroup.appendChild(option);
-            });
-        }
-    }
-}
-
-// Обновленная функция getCategoryName
-function getCategoryName(category) {
-    // Сначала проверяем пользовательские категории
-    if (appState.customCategories) {
-        for (let type of ['income', 'expense']) {
-            const found = appState.customCategories[type]?.find(c => c.id === category);
-            if (found) return `${found.icon} ${found.name}`;
-        }
-    }
-
-    // Стандартные категории
-    const categories = {
-        'salary': '💼 Зарплата',
-        'gifts': '🎁 Подарки',
-        'investments': '📈 Инвестиции',
-        'freelance': '💻 Фриланс',
-        'food': '🍔 Еда',
-        'housing': '🏠 Жилье',
-        'transport': '🚗 Транспорт',
-        'clothes': '👕 Одежда',
-        'health': '💊 Здоровье',
-        'entertainment': '🎮 Развлечения',
-        'education': '📚 Образование',
-        'pets': '🐶 Животные',
-        'communication': '📱 Связь',
-        'work': '💼 Работа',
-        'initial': '💰 Начальный баланс',
-        'transfer': '🔄 Перевод'
-    };
-
-    return categories[category] || category;
-}
-
-// Обновленная функция updateCategoriesList
-function updateCategoriesList() {
-    const incomeList = document.getElementById('incomeCategoriesList');
-    const expenseList = document.getElementById('expenseCategoriesList');
-
-    if (incomeList) {
-        incomeList.innerHTML = getCategoriesListHTML('income');
-    }
-
-    if (expenseList) {
-        expenseList.innerHTML = getCategoriesListHTML('expense');
-    }
-}
-
-function getCategoriesListHTML(type) {
-    const categories = appState.customCategories?.[type] || [];
-
-    if (categories.length === 0) {
-        return '<p style="text-align: center; color: var(--hint-color); padding: 20px;">Нет своих категорий</p>';
-    }
-
-    return categories.map(cat => `
-        <div class="category-item">
-            <div class="category-item-left">
-                <div class="category-icon" style="background: ${cat.color}20; color: ${cat.color}">
-                    ${cat.icon}
-                </div>
-                <span class="category-name">${cat.name}</span>
-                <span class="category-type-badge">${type === 'income' ? '💰' : '💸'}</span>
-            </div>
-            <div class="category-actions">
-                <button onclick="editCategory('${cat.id}')">✏️</button>
-                <button onclick="deleteCategory('${cat.id}')">🗑️</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Обновленная функция editCategory
-function editCategory(categoryId) {
-    let category = null;
-    let categoryType = null;
-
-    for (const type of ['income', 'expense']) {
-        const found = appState.customCategories?.[type]?.find(c => c.id === categoryId);
-        if (found) {
-            category = found;
-            categoryType = type;
-            break;
-        }
-    }
-
-    if (!category) return;
-
-    const newName = prompt('Новое название категории:', category.name);
-    if (newName) {
-        category.name = newName;
-        updateCategoriesList();
-        updateCategorySelector();
-        saveData();
-    }
-}
-
-// Обновленная функция deleteCategory
-function deleteCategory(categoryId) {
-    if (!confirm('Удалить категорию?')) return;
-
-    for (const type of ['income', 'expense']) {
-        if (appState.customCategories?.[type]) {
-            appState.customCategories[type] = appState.customCategories[type].filter(c => c.id !== categoryId);
-        }
-    }
-
-    updateCategoriesList();
-    updateCategorySelector();
-    saveData();
-}
-
-// Переменная для текущей вкладки
-let currentTab = 'main';
-
-// Переключение вкладок
 function switchTab(tab) {
     currentTab = tab;
 
-    // Обновляем активную кнопку
     document.querySelectorAll('.nav-tab').forEach(btn => {
         btn.classList.remove('active');
     });
     document.getElementById(`tab-${tab}`).classList.add('active');
 
-    // Показываем нужный контент
     document.getElementById('main-content').style.display = tab === 'main' ? 'block' : 'none';
     document.getElementById('analytics-content').style.display = tab === 'analytics' ? 'block' : 'none';
     document.getElementById('plans-content').style.display = tab === 'plans' ? 'block' : 'none';
 
-    // Обновляем данные при переключении
     if (tab === 'analytics') {
         updateCharts();
-        updateCategorySelector();
+        updateAnalyticsCategorySelector();
     } else if (tab === 'plans') {
         updatePlans();
         updatePlansChart();
     }
 }
-
-// Обновленная функция updateBudgetUI (для обеих вкладок)
-function updateBudgetUI() {
-    if (appState.budget > 0) {
-        const now = new Date();
-        const monthExpenses = appState.transactions.filter(t => {
-            const tDate = new Date(t.date);
-            return t.type === 'expense' && tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
-        }).reduce((sum, t) => sum + t.amount, 0);
-        const percent = Math.min((monthExpenses / appState.budget) * 100, 100);
-
-        // Обновляем оба прогресс-бара
-        const bar = document.getElementById('budgetBar');
-        const barDetailed = document.getElementById('budgetBarDetailed');
-        const spentEl = document.getElementById('spentAmount');
-        const spentDetailed = document.getElementById('spentAmountDetailed');
-        const budgetEl = document.getElementById('budgetAmount');
-        const budgetDetailed = document.getElementById('budgetAmountDetailed');
-
-        if (bar) bar.style.width = percent + '%';
-        if (barDetailed) barDetailed.style.width = percent + '%';
-        if (spentEl) spentEl.textContent = formatMoney(monthExpenses);
-        if (spentDetailed) spentDetailed.textContent = formatMoney(monthExpenses);
-        if (budgetEl) budgetEl.textContent = formatMoney(appState.budget);
-        if (budgetDetailed) budgetDetailed.textContent = formatMoney(appState.budget);
-    }
-}
-
-// Новая функция для графика выполнения планов
-let plansChart = null;
 
 function updatePlansChart() {
     const canvas = document.getElementById('plansChart');
@@ -1892,414 +1689,31 @@ function updatePlansChart() {
     });
 }
 
-// Обновляем функцию updatePlans
-function updatePlans() {
-    if (!appState.plans) appState.plans = [];
-    const plansList = document.getElementById('plansList');
-    if (!plansList) return;
+// ===== ФУНКЦИИ ДЛЯ ЭМОДЗИ =====
 
-    const sortedPlans = [...appState.plans].sort((a, b) => {
-        if (a.completed && !b.completed) return 1;
-        if (!a.completed && b.completed) return -1;
-        return new Date(a.date) - new Date(b.date);
-    });
+function updateEmojiList() {
+    const emojiCategory = document.getElementById('emojiCategory')?.value || 'all';
+    const grid = document.getElementById('emojiGrid');
+    if (!grid) return;
 
-    plansList.innerHTML = sortedPlans.map(plan => {
-        const account = appState.accounts.find(a => a.id === plan.accountId);
-        const isOverdue = !plan.completed && new Date(plan.date) < new Date();
-        const dateStr = new Date(plan.date).toLocaleDateString('ru-RU');
-        return `
-            <div class="plan-item ${plan.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}">
-                <input type="checkbox" class="plan-checkbox" ${plan.completed ? 'checked' : ''} onchange="togglePlanComplete('${plan.id}', this.checked)">
-                <div class="plan-info">
-                    <div class="plan-name">${plan.name} ${plan.recurring ? `<span class="plan-recurring">${plan.recurring === 'weekly' ? 'Каждую неделю' : 'Каждый месяц'}</span>` : ''}</div>
-                    <div class="plan-details">
-                        <span class="plan-amount">${formatMoney(plan.amount)}</span>
-                        <span class="plan-category">${getCategoryName(plan.category)}</span>
-                        <span class="plan-date ${isOverdue ? 'overdue' : ''}">📅 ${dateStr} ${isOverdue ? '(просрочено)' : ''}</span>
-                        ${account ? `<span>${account.icon} ${account.name}</span>` : ''}
-                    </div>
-                </div>
-                <div class="plan-actions">
-                    <button onclick="editPlan('${plan.id}')">✏️</button>
-                    <button onclick="deletePlan('${plan.id}')">🗑️</button>
-                </div>
-            </div>
-        `;
-    }).join('');
+    const emojis = emojiData[emojiCategory] || emojiData.all;
 
-    updatePlansSummary();
-    if (currentTab === 'plans') {
-        updatePlansChart();
-    }
+    grid.innerHTML = emojis.map(emoji => `
+        <div class="emoji-item ${selectedEmoji === emoji ? 'selected' : ''}"
+             onclick="selectEmoji('${emoji}')">
+            ${emoji}
+        </div>
+    `).join('');
 }
 
-// Обновляем функцию updatePlansSummary
-function updatePlansSummary() {
-    if (!appState.plans) return;
-    let totalPlanned = 0, totalCompleted = 0;
-    appState.plans.forEach(plan => {
-        if (!plan.completed) totalPlanned += plan.amount;
-        else totalCompleted += plan.amount;
-    });
-
-    const plannedEl = document.getElementById('totalPlanned');
-    const completedEl = document.getElementById('totalCompleted');
-    const remainingEl = document.getElementById('totalRemaining');
-
-    if (plannedEl) plannedEl.textContent = formatMoney(totalPlanned);
-    if (completedEl) completedEl.textContent = formatMoney(totalCompleted);
-    if (remainingEl) remainingEl.textContent = formatMoney(totalPlanned);
+function selectEmoji(emoji) {
+    selectedEmoji = emoji;
+    updateEmojiList();
 }
 
-// Обновляем функцию updateUI
-function updateUI() {
-    const activeAccount = appState.accounts.find(a => a.id === appState.activeAccount);
-    if (activeAccount) document.getElementById('balance').textContent = formatMoney(activeAccount.balance);
+// ===== ФУНКЦИИ ДЛЯ ОБНОВЛЕНИЙ =====
 
-    if (currentTab === 'main') {
-        updateStatsByPeriod();
-    } else if (currentTab === 'analytics') {
-        updateStatsByPeriod();
-        updateCharts();
-    } else if (currentTab === 'plans') {
-        updatePlans();
-    }
-
-    updateBudgetUI();
-    updateAccountsSummary();
-}
-
-// Обновляем функцию loadData
-function loadData() {
-    const saved = localStorage.getItem('financeData');
-    if (saved) {
-        try {
-            appState = JSON.parse(saved);
-            if (!appState.plans) appState.plans = [];
-            if (!appState.customCategories) {
-                appState.customCategories = { income: [], expense: [] };
-            }
-        } catch (e) {
-            console.log('Ошибка загрузки');
-        }
-    }
-    initializeAccounts();
-    updateCategorySelector();
-    updateUI();
-    setTimeout(checkFirstLaunch, 500);
-}
-// Переменная для выбранной категории в аналитике
-let selectedAnalysisCategory = null;
-
-// Обновление селектора категорий для аналитики
-function updateCategorySelector() {
-    const selector = document.getElementById('categorySelector');
-    if (!selector) return;
-
-    // Собираем все категории расходов
-    const categories = new Set();
-
-    // Стандартные категории расходов
-    const standardCategories = {
-        'food': '🍔 Еда',
-        'housing': '🏠 Жилье',
-        'transport': '🚗 Транспорт',
-        'clothes': '👕 Одежда',
-        'health': '💊 Здоровье',
-        'entertainment': '🎮 Развлечения',
-        'education': '📚 Образование',
-        'pets': '🐶 Животные',
-        'communication': '📱 Связь',
-        'gifts_expense': '🎁 Подарки',
-        'work': '💼 Работа'
-    };
-
-    selector.innerHTML = '<option value="">Все категории</option>';
-
-    // Добавляем стандартные категории
-    Object.entries(standardCategories).forEach(([id, name]) => {
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = name;
-        selector.appendChild(option);
-    });
-
-    // Добавляем пользовательские категории расходов
-    if (appState.customCategories?.expense) {
-        appState.customCategories.expense.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat.id;
-            option.textContent = `${cat.icon} ${cat.name}`;
-            selector.appendChild(option);
-        });
-    }
-}
-
-// Выбор категории для анализа
-function selectCategoryForAnalysis() {
-    const selector = document.getElementById('categorySelector');
-    const categoryId = selector.value;
-
-    if (!categoryId) {
-        // Показать все категории
-        document.getElementById('categoryAnalysisInfo').style.display = 'none';
-        document.getElementById('categoryTransactionsCard').style.display = 'none';
-        selectedAnalysisCategory = null;
-        updateCharts();
-        return;
-    }
-
-    selectedAnalysisCategory = categoryId;
-
-    // Получаем название категории
-    let categoryName = '';
-    let categoryIcon = '📊';
-
-    // Проверяем стандартные категории
-    const standardCategories = {
-        'food': '🍔 Еда',
-        'housing': '🏠 Жилье',
-        'transport': '🚗 Транспорт',
-        'clothes': '👕 Одежда',
-        'health': '💊 Здоровье',
-        'entertainment': '🎮 Развлечения',
-        'education': '📚 Образование',
-        'pets': '🐶 Животные',
-        'communication': '📱 Связь',
-        'gifts_expense': '🎁 Подарки',
-        'work': '💼 Работа'
-    };
-
-    if (standardCategories[categoryId]) {
-        categoryName = standardCategories[categoryId];
-        categoryIcon = categoryName.split(' ')[0];
-    } else {
-        // Проверяем пользовательские категории
-        for (const type of ['income', 'expense']) {
-            const found = appState.customCategories?.[type]?.find(c => c.id === categoryId);
-            if (found) {
-                categoryName = found.name;
-                categoryIcon = found.icon;
-                break;
-            }
-        }
-    }
-
-    document.getElementById('selectedCategoryIcon').textContent = categoryIcon;
-    document.getElementById('selectedCategoryName').textContent = categoryName;
-    document.getElementById('categoryAnalysisInfo').style.display = 'block';
-
-    // Обновляем данные по категории
-    updateCategoryAnalysis();
-}
-
-// Обновление анализа по категории
-function updateCategoryAnalysis() {
-    if (!selectedAnalysisCategory) return;
-
-    const { startDate, endDate } = getPeriodDates();
-
-    // Фильтруем транзакции по категории и периоду
-    const categoryTransactions = appState.transactions.filter(t => {
-        if (t.type !== 'expense') return false;
-        if (t.category !== selectedAnalysisCategory) return false;
-
-        const tDate = new Date(t.date);
-        return tDate >= startDate && tDate <= endDate;
-    });
-
-    // Считаем общую сумму
-    const total = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
-    document.getElementById('selectedCategoryTotal').textContent = formatMoney(total);
-
-    // Показываем список транзакций
-    if (categoryTransactions.length > 0) {
-        document.getElementById('categoryTransactionsCard').style.display = 'block';
-        document.getElementById('categoryTransactionCount').textContent =
-            `${categoryTransactions.length} операций`;
-
-        const list = document.getElementById('categoryTransactionsList');
-        list.innerHTML = categoryTransactions
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .map(t => {
-                const date = new Date(t.date).toLocaleDateString('ru-RU');
-                return `
-                    <div class="transaction-item">
-                        <div>
-                            <div class="transaction-date">${date}</div>
-                            <div class="transaction-desc">${t.description || '—'}</div>
-                        </div>
-                        <div class="transaction-amount">${formatMoney(t.amount)}</div>
-                    </div>
-                `;
-            }).join('');
-    } else {
-        document.getElementById('categoryTransactionsCard').style.display = 'none';
-    }
-}
-
-// Обновленная функция updateCharts (только категории)
-function updateCharts() {
-    updateCategoriesChart();
-    updateTotals();
-
-    // Если выбрана категория, обновляем её данные
-    if (selectedAnalysisCategory) {
-        updateCategoryAnalysis();
-    }
-}
-
-// Обновленная функция updateCategoriesChart
-function updateCategoriesChart() {
-    const canvas = document.getElementById('categoriesChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    const { startDate, endDate } = getPeriodDates();
-
-    const expensesByCategory = {};
-
-    appState.transactions.forEach(t => {
-        if (t.type === 'expense') {
-            const tDate = new Date(t.date);
-            if (tDate >= startDate && tDate <= endDate) {
-                const catName = getCategoryName(t.category);
-                expensesByCategory[catName] = (expensesByCategory[catName] || 0) + t.amount;
-            }
-        }
-    });
-
-    if (Object.keys(expensesByCategory).length === 0) {
-        expensesByCategory['Нет данных'] = 1;
-    }
-
-    if (categoriesChart) categoriesChart.destroy();
-
-    categoriesChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: Object.keys(expensesByCategory),
-            datasets: [{
-                data: Object.values(expensesByCategory),
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-                    '#FF9F40', '#FF6384', '#C9CBCF', '#7BC8A4', '#E7B9FF'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.raw || 0;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${label}: ${formatMoney(value)} (${percentage}%)`;
-                        }
-                    }
-                }
-            },
-            onClick: (event, elements) => {
-                if (elements.length > 0) {
-                    const index = elements[0].index;
-                    const categoryName = categoriesChart.data.labels[index];
-
-                    // Находим ID категории по имени
-                    let categoryId = null;
-
-                    // Ищем в стандартных категориях
-                    const standardCategories = {
-                        '🍔 Еда': 'food',
-                        '🏠 Жилье': 'housing',
-                        '🚗 Транспорт': 'transport',
-                        '👕 Одежда': 'clothes',
-                        '💊 Здоровье': 'health',
-                        '🎮 Развлечения': 'entertainment',
-                        '📚 Образование': 'education',
-                        '🐶 Животные': 'pets',
-                        '📱 Связь': 'communication',
-                        '🎁 Подарки': 'gifts_expense',
-                        '💼 Работа': 'work'
-                    };
-
-                    if (standardCategories[categoryName]) {
-                        categoryId = standardCategories[categoryName];
-                    } else {
-                        // Ищем в пользовательских
-                        for (const type of ['expense']) {
-                            const found = appState.customCategories?.[type]?.find(c =>
-                                `${c.icon} ${c.name}` === categoryName
-                            );
-                            if (found) {
-                                categoryId = found.id;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (categoryId) {
-                        // Выбираем категорию в селекторе
-                        const selector = document.getElementById('categorySelector');
-                        selector.value = categoryId;
-                        selectCategoryForAnalysis();
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Обновляем функцию updateStatsByPeriod
-function updateStatsByPeriod() {
-    const { startDate, endDate } = getPeriodDates();
-
-    if (!startDate || !endDate) return;
-
-    const filteredTransactions = appState.transactions.filter(t => {
-        const tDate = new Date(t.date);
-        return tDate >= startDate && tDate <= endDate;
-    });
-
-    let periodIncome = 0;
-    let periodExpense = 0;
-
-    filteredTransactions.forEach(t => {
-        if (t.type === 'income') {
-            periodIncome += t.amount;
-        } else {
-            periodExpense += t.amount;
-        }
-    });
-
-    const todayIncome = document.getElementById('todayIncome');
-    const todayExpense = document.getElementById('todayExpense');
-
-    if (todayIncome) todayIncome.textContent = formatMoney(periodIncome);
-    if (todayExpense) todayExpense.textContent = formatMoney(periodExpense);
-
-    updateTotalsWithFilter(filteredTransactions);
-
-    // Обновляем анализ категории если выбрана
-    if (selectedAnalysisCategory) {
-        updateCategoryAnalysis();
-    }
-}
-
-// Удаляем функции для других графиков (updateDailyChart, updateBalanceChart)
-// или просто закомментируй их вызовы
-// Добавь в конец файла script.js
-
-// Простая проверка обновлений
 async function checkForUpdates() {
-    // Если есть новая версия service worker, обновляем
     if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.getRegistration();
         if (registration) {
@@ -2308,21 +1722,30 @@ async function checkForUpdates() {
     }
 }
 
-// Проверяем каждые 30 минут
-setInterval(checkForUpdates, 30 * 60 * 1000);
+// Инициализация
+document.addEventListener('DOMContentLoaded', () => {
+    loadData();
 
-// Проверяем когда приложение становится активным
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-        checkForUpdates();
-    }
+    // Проверяем каждые 30 минут
+    setInterval(checkForUpdates, 30 * 60 * 1000);
+
+    // Проверяем когда приложение становится активным
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            checkForUpdates();
+        }
+    });
+
+    // Принудительное обновление при ошибках
+    window.addEventListener('error', () => {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistration().then(reg => {
+                if (reg) reg.unregister().then(() => window.location.reload());
+            });
+        }
+    });
 });
 
-// Принудительное обновление при ошибках
-window.addEventListener('error', () => {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistration().then(reg => {
-            if (reg) reg.unregister().then(() => window.location.reload());
-        });
-    }
-});
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+}
