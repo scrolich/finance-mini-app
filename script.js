@@ -388,26 +388,56 @@ function updateCategoriesChart() {
 
     if (categoriesChart) categoriesChart.destroy();
 
+    // Красивые насыщенные цвета для каждой категории
+    const colors = [
+        '#FF6B6B', // ярко-красный
+        '#4ECDC4', // бирюзовый
+        '#FFD166', // желтый
+        '#A78BFA', // фиолетовый
+        '#F472B6', // розовый
+        '#6EE7B7', // мятный
+        '#FCD34D', // золотой
+        '#C084FC', // лавандовый
+        '#60A5FA', // синий
+        '#34D399', // изумрудный
+        '#F87171', // коралловый
+        '#818CF8'  // индиго
+    ];
+
     categoriesChart = new Chart(ctx, {
         type: 'pie',
         data: {
             labels: Object.keys(expensesByCategory),
             datasets: [{
                 data: Object.values(expensesByCategory),
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-                    '#FF9F40', '#FF6384', '#C9CBCF', '#7BC8A4', '#E7B9FF'
-                ]
+                backgroundColor: colors.slice(0, Object.keys(expensesByCategory).length),
+                borderWidth: 0,
+                borderRadius: 8, // Закругленные края для объема
+                spacing: 4,      // Промежутки между секторами
+                offset: [0, 0, 0, 0], // Можно будет анимировать при наведении
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '0%', // Обычная круговая (не пончик)
             plugins: {
                 legend: {
-                    position: 'bottom'
+                    position: 'bottom',
+                    labels: {
+                        font: { size: 12, weight: '500' },
+                        color: getComputedStyle(document.body).getPropertyValue('--text-color').trim(),
+                        padding: 15,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    padding: 12,
+                    cornerRadius: 8,
                     callbacks: {
                         label: function(context) {
                             const label = context.label || '';
@@ -419,50 +449,19 @@ function updateCategoriesChart() {
                     }
                 }
             },
-            onClick: (event, elements) => {
-                if (elements.length > 0) {
-                    const index = elements[0].index;
-                    const categoryName = categoriesChart.data.labels[index];
-
-                    // Находим ID категории по имени
-                    let categoryId = null;
-
-                    // Ищем в стандартных категориях
-                    const standardCategories = {
-                        '🍔 Еда': 'food',
-                        '🏠 Жилье': 'housing',
-                        '🚗 Транспорт': 'transport',
-                        '👕 Одежда': 'clothes',
-                        '💊 Здоровье': 'health',
-                        '🎮 Развлечения': 'entertainment',
-                        '📚 Образование': 'education',
-                        '🐶 Животные': 'pets',
-                        '📱 Связь': 'communication',
-                        '🎁 Подарки': 'gifts_expense',
-                        '💼 Работа': 'work'
-                    };
-
-                    if (standardCategories[categoryName]) {
-                        categoryId = standardCategories[categoryName];
-                    } else {
-                        // Ищем в пользовательских
-                        for (const type of ['expense']) {
-                            const found = appState.customCategories?.[type]?.find(c =>
-                                `${c.icon} ${c.name}` === categoryName
-                            );
-                            if (found) {
-                                categoryId = found.id;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (categoryId) {
-                        // Выбираем категорию в селекторе
-                        const selector = document.getElementById('categorySelector');
-                        selector.value = categoryId;
-                        selectCategoryForAnalysis();
-                    }
+            layout: {
+                padding: {
+                    top: 20,
+                    bottom: 20
+                }
+            },
+            elements: {
+                arc: {
+                    borderWidth: 2,
+                    borderColor: '#ffffff', // Белая обводка для объема
+                    hoverBorderWidth: 3,
+                    hoverBorderColor: '#ffffff',
+                    hoverOffset: 15 // Эффект вылета при наведении
                 }
             }
         }
@@ -1764,4 +1763,17 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         hideQuickActions();
     }
+});
+// Функции для красивой кнопки
+function showQuickActions() {
+    document.getElementById('quickMenu').style.display = 'flex';
+}
+
+function hideQuickActions() {
+    document.getElementById('quickMenu').style.display = 'none';
+}
+
+// Закрытие по ESC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideQuickActions();
 });
