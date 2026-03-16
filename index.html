@@ -738,5 +738,38 @@
         console.log('🔄 Система синхронизации запущена с', SERVER_URL);
     })();
 </script>
+<!-- Красивая главная кнопка -->
+<div class="floating-action">
+    <button class="fab" onclick="showQuickActions()">
+        <span class="fab-icon">➕</span>
+    </button>
+</div>
+
+<!-- Меню быстрых действий (появляется при нажатии) -->
+<div id="quickMenu" class="quick-menu" style="display: none;">
+    <div class="quick-menu-overlay" onclick="hideQuickActions()"></div>
+    <div class="quick-menu-content">
+        <button class="quick-action" onclick="showForm('income'); hideQuickActions()">
+            <span class="quick-icon">💰</span>
+            <span class="quick-text">Доход</span>
+        </button>
+        <button class="quick-action" onclick="showForm('expense'); hideQuickActions()">
+            <span class="quick-icon">💸</span>
+            <span class="quick-text">Расход</span>
+        </button>
+        <button class="quick-action" onclick="showTransferForm(); hideQuickActions()">
+            <span class="quick-icon">🔄</span>
+            <span class="quick-text">Перевод</span>
+        </button>
+        <button class="quick-action" onclick="showPlanForm(); hideQuickActions()">
+            <span class="quick-icon">📋</span>
+            <span class="quick-text">Новый план</span>
+        </button>
+        <button class="quick-action" onclick="showAccountForm(); hideQuickActions()">
+            <span class="quick-icon">🏦</span>
+            <span class="quick-text">Новый счет</span>
+        </button>
+    </div>
+</div>
 </body>
 </html>

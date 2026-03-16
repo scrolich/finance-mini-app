@@ -1749,3 +1749,19 @@ document.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
 }
+// Показать меню быстрых действий
+function showQuickActions() {
+    document.getElementById('quickMenu').style.display = 'flex';
+}
+
+// Скрыть меню
+function hideQuickActions() {
+    document.getElementById('quickMenu').style.display = 'none';
+}
+
+// Закрывать по нажатию на ESC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        hideQuickActions();
+    }
+});
