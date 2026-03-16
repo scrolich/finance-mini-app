@@ -655,5 +655,88 @@
         setTimeout(loadDataFromStorage, 500);
     })();
 </script>
+
+<script>
+    (function() {
+        // ТВОЙ УНИКАЛЬНЫЙ URL
+        const SERVER_URL = 'https://finance-mini-app-production.up.railway.app';
+
+        const STORAGE_KEY = 'financeData';
+        let deviceId = localStorage.getItem('deviceId');
+
+        if (!deviceId) {
+            deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('deviceId', deviceId);
+        }
+
+        async function syncToServer() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                if (!data) return;
+
+                const response = await fetch(`${SERVER_URL}/api/sync`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Device-ID': deviceId
+                    },
+                    body: data
+                });
+
+                if (response.ok) {
+                    console.log('✅ Данные отправлены в облако');
+                }
+            } catch (e) {
+                console.log('❌ Ошибка отправки:', e);
+            }
+        }
+
+        async function syncFromServer() {
+            try {
+                const response = await fetch(`${SERVER_URL}/api/load`, {
+                    headers: {
+                        'X-Device-ID': deviceId
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.data) {
+                    const localData = localStorage.getItem(STORAGE_KEY);
+
+                    if (!localData || JSON.stringify(result.data) !== localData) {
+                        console.log('📥 Загружаем данные с сервера');
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(result.data));
+
+                        if (window.appState) {
+                            Object.assign(window.appState, result.data);
+                            if (window.updateUI) window.updateUI();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log('❌ Ошибка загрузки:', e);
+            }
+        }
+
+        // Перехватываем saveData
+        const originalSaveData = window.saveData;
+        window.saveData = function() {
+            if (originalSaveData) originalSaveData();
+            syncToServer();
+        };
+
+        // Загружаем при старте
+        setTimeout(syncFromServer, 1000);
+
+        // Синхронизируем каждые 30 секунд
+        setInterval(syncFromServer, 30000);
+
+        // При фокусе тоже синхронизируем
+        window.addEventListener('focus', syncFromServer);
+
+        console.log('🔄 Система синхронизации запущена с', SERVER_URL);
+    })();
+</script>
 </body>
 </html>
