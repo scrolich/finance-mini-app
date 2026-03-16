@@ -106,7 +106,7 @@
             </div>
         </div>
 
-        <!-- Контент страницы аналитики (изначально скрыт) -->
+        <!-- Контент страницы аналитики -->
         <div id="analytics-content" style="display: none;">
             <!-- Переключатель валют -->
             <div class="currency-buttons">
@@ -136,39 +136,61 @@
                 </div>
             </div>
 
-            <!-- Графики -->
+            <!-- Выбор категории -->
             <div class="card">
-                <div class="card-title">📊 Аналитика</div>
-
-                <div class="tab-buttons">
-                    <button class="tab-btn active" onclick="showChart('categories')" id="tab-categories">По категориям</button>
-                    <button class="tab-btn" onclick="showChart('daily')" id="tab-daily">По дням</button>
-                    <button class="tab-btn" onclick="showChart('balance')" id="tab-balance">Баланс</button>
+                <div class="card-title">🔍 Выберите категорию</div>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <select id="categorySelector" class="category-select" onchange="selectCategoryForAnalysis()">
+                        <option value="">Все категории</option>
+                    </select>
                 </div>
 
+                <!-- Инфо по выбранной категории -->
+                <div id="categoryAnalysisInfo" class="category-analysis-info" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div>
+                            <span class="category-analysis-icon" id="selectedCategoryIcon">📊</span>
+                            <span class="category-analysis-name" id="selectedCategoryName"></span>
+                        </div>
+                        <div class="category-analysis-total">
+                            <div class="stat-label">Всего</div>
+                            <div class="stat-value expense" id="selectedCategoryTotal">0 ₽</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- График по категориям -->
+            <div class="card">
+                <div class="card-title">📊 Распределение расходов</div>
                 <div id="chart-categories" style="height: 250px;">
                     <canvas id="categoriesChart"></canvas>
                 </div>
-                <div id="chart-daily" style="height: 250px; display: none;">
-                    <canvas id="dailyChart"></canvas>
-                </div>
-                <div id="chart-balance" style="height: 250px; display: none;">
-                    <canvas id="balanceChart"></canvas>
-                </div>
+            </div>
 
-                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--hint-color);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span>💰 Всего доходов:</span>
-                        <span class="income" id="totalIncome">0 ₽</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span>💸 Всего расходов:</span>
-                        <span class="expense" id="totalExpense">0 ₽</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                        <span>📊 Разница:</span>
-                        <span id="totalDiff">0 ₽</span>
-                    </div>
+            <!-- Детальный список расходов по выбранной категории -->
+            <div class="card" id="categoryTransactionsCard" style="display: none;">
+                <div class="card-title">
+                    <span>📝 Детали по категории</span>
+                    <span class="transaction-count" id="categoryTransactionCount">0 операций</span>
+                </div>
+                <div id="categoryTransactionsList" class="transactions-list"></div>
+            </div>
+
+            <!-- Сводная статистика -->
+            <div class="card">
+                <div class="card-title">📈 Общая статистика</div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>💰 Всего доходов:</span>
+                    <span class="income" id="totalIncome">0 ₽</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>💸 Всего расходов:</span>
+                    <span class="expense" id="totalExpense">0 ₽</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                    <span>📊 Разница:</span>
+                    <span id="totalDiff">0 ₽</span>
                 </div>
             </div>
 
@@ -190,7 +212,7 @@
                 </div>
             </div>
 
-            <!-- Бюджет (подробно) -->
+            <!-- Бюджет -->
             <div class="card">
                 <div class="card-title">🎯 Бюджет месяца</div>
                 <div class="budget-progress">
