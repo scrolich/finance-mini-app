@@ -119,9 +119,25 @@ const ACCOUNT_TYPES = {
     investment: { name: 'Инвестиции', icon: '📈', color: '#9C27B0' }
 };
 
-// Сохраняем ссылку на appState в глобальной области
+// В самом начале script.js, после объявления переменных
 window.appState = appState;
 window.updateUI = updateUI;
+
+// Сохраняем оригинальную функцию saveData
+const originalSaveData = saveData;
+
+// Переопределяем saveData
+saveData = function() {
+    // Вызываем оригинальную функцию
+    originalSaveData();
+    console.log('✅ Данные сохранены, синхронизация...');
+
+    // Дополнительно оповещаем
+    if (window.dispatchEvent) {
+        window.dispatchEvent(new Event('finance-data-changed'));
+    }
+};
+
 window.saveData = saveData;
 
 function formatMoney(amount) {

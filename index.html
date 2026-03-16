@@ -554,96 +554,105 @@
     <!-- JavaScript -->
     <script src="script.js"></script>
 
-    <script>
-    // ===== АВТОМАТИЧЕСКАЯ СИНХРОНИЗАЦИЯ PWA И БРАУЗЕРА =====
+    <!-- Индикатор синхронизации (временно) -->
+<div style="position: fixed; top: 0; left: 0; right: 0; background: #333; color: white; padding: 5px; text-align: center; font-size: 12px; z-index: 9999;" id="syncIndicator">
+    Загрузка...
+</div>
+
+<script>
+    // ===== ПРОСТАЯ АВТОМАТИЧЕСКАЯ СИНХРОНИЗАЦИЯ =====
     (function() {
-        // Определяем режим запуска
+        const indicator = document.getElementById('syncIndicator');
+
+        function log(msg, isError = false) {
+            console.log('🔄 Синхронизация:', msg);
+            if (indicator) {
+                indicator.style.background = isError ? '#f44336' : '#4CAF50';
+                indicator.textContent = msg;
+                setTimeout(() => {
+                    indicator.style.background = '#333';
+                    indicator.textContent = 'Синхронизация активна';
+                }, 2000);
+            }
+        }
+
+        // Определяем режим
         const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
                      window.navigator.standalone === true;
 
-        console.log(`📱 Режим: ${isPWA ? 'PWA (иконка)' : 'Браузер'}`);
+        log(`Режим: ${isPWA ? 'PWA' : 'Браузер'}`);
 
-        // Ключ для хранения данных
+        // Ключ для данных
         const STORAGE_KEY = 'financeData';
 
-        // Функция загрузки данных из localStorage
-        function loadFromStorage() {
+        // Функция принудительной загрузки
+        function loadDataFromStorage() {
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved && window.appState) {
                     const newData = JSON.parse(saved);
-                    // Обновляем только если данные действительно изменились
-                    if (JSON.stringify(window.appState) !== JSON.stringify(newData)) {
-                        console.log('🔄 Обновление данных из localStorage');
-                        Object.assign(window.appState, newData);
-                        if (typeof window.updateUI === 'function') {
-                            window.updateUI();
-                        }
+                    log('Данные загружены из localStorage');
+
+                    // Обновляем appState
+                    window.appState.balance = newData.balance || 0;
+                    window.appState.transactions = newData.transactions || [];
+                    window.appState.accounts = newData.accounts || window.appState.accounts;
+
+                    // Обновляем интерфейс
+                    if (window.updateUI) {
+                        window.updateUI();
+                        log('Интерфейс обновлен');
                     }
                 }
             } catch (e) {
-                console.log('Ошибка загрузки:', e);
+                log('Ошибка загрузки: ' + e.message, true);
             }
         }
 
-        // Сохраняем оригинальный setItem
+        // Сохраняем данные и оповещаем
         const originalSetItem = localStorage.setItem;
-
-        // Переопределяем setItem для автоматического оповещения
         localStorage.setItem = function(key, value) {
-            // Вызываем оригинальный метод
             originalSetItem.call(this, key, value);
-
-            // Если это наши данные, оповещаем другие окна
             if (key === STORAGE_KEY) {
-                console.log('📢 Данные обновлены, оповещаем другие окна');
-                // Создаем и диспатчим кастомное событие
-                window.dispatchEvent(new CustomEvent('localDataUpdated', {
-                    detail: { key, value }
-                }));
+                log('Данные сохранены в localStorage');
+                // Диспатчим событие
+                window.dispatchEvent(new Event('finance-data-changed'));
             }
         };
 
-        // Слушаем изменения в localStorage от других окон
-        window.addEventListener('storage', (event) => {
-            if (event.key === STORAGE_KEY && event.newValue) {
-                console.log('📥 Обнаружены изменения в localStorage');
-                loadFromStorage();
+        // Слушаем изменения
+        window.addEventListener('storage', (e) => {
+            if (e.key === STORAGE_KEY) {
+                log('Изменение в другом окне');
+                loadDataFromStorage();
             }
         });
 
-        // Слушаем кастомные события от этого же окна
-        window.addEventListener('localDataUpdated', () => {
-            console.log('📥 Обновление в этом же окне');
-            loadFromStorage();
+        window.addEventListener('finance-data-changed', () => {
+            log('Изменение в этом же окне');
+            loadDataFromStorage();
         });
 
-        // Для PWA: проверяем при каждом фокусе
-        if (isPWA) {
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) {
-                    console.log('👆 PWA в фокусе, проверяем данные');
-                    loadFromStorage();
-                }
-            });
-
-            // Также проверяем периодически (раз в 2 секунды)
-            setInterval(loadFromStorage, 2000);
-        } else {
-            // Для браузера тоже проверяем периодически
-            setInterval(loadFromStorage, 2000);
-        }
-
-        // Перехватываем сохранение данных в приложении
-        const originalSaveData = window.saveData;
-        window.saveData = function() {
-            if (originalSaveData) {
-                originalSaveData();
+        // Проверяем каждую секунду
+        setInterval(() => {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved && window.appState) {
+                try {
+                    const savedData = JSON.parse(saved);
+                    if (savedData.balance !== window.appState.balance ||
+                        savedData.transactions?.length !== window.appState.transactions?.length) {
+                        log('Обнаружено расхождение, синхронизируем...');
+                        loadDataFromStorage();
+                    }
+                } catch (e) {}
             }
-            // После сохранения, localStorage сам оповестит другие окна
-        };
+        }, 1000);
 
-        console.log('✅ Система синхронизации запущена');
+        // Сохраняем ссылки на функции
+        window.forceSync = loadDataFromStorage;
+
+        // Первая загрузка
+        setTimeout(loadDataFromStorage, 500);
     })();
 </script>
 </body>
