@@ -1,3 +1,16 @@
+const STORAGE_KEY = 'financeData';
+
+// загрузка
+function loadData() {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : null;
+}
+
+// сохранение
+function saveData(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
 // Глобальная переменная для отслеживания режима
 const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
               window.navigator.standalone === true;
@@ -20,13 +33,6 @@ function forceSync() {
     }
 }
 
-// Слушаем события от других вкладок
-window.addEventListener('storage', (event) => {
-    if (event.key === 'financeData' && event.newValue) {
-        console.log('📥 Обнаружены изменения в другом окне');
-        forceSync();
-    }
-});
 
 // Если это PWA, проверяем при каждом фокусе
 if (isPWA) {
@@ -36,7 +42,7 @@ if (isPWA) {
     });
 }
 
-let appState = {
+const defaultState = {
     accounts: [
         {
             id: 'main',
@@ -57,6 +63,8 @@ let appState = {
         expense: []
     }
 };
+
+let appState = loadData() || defaultState;
 
 let categoriesChart = null;
 let dailyChart = null;
@@ -1777,3 +1785,20 @@ function hideQuickActions() {
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') hideQuickActions();
 });
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+        reg.onupdatefound = () => {
+            const newWorker = reg.installing;
+
+            newWorker.onstatechange = () => {
+                if (newWorker.state === 'installed') {
+                    if (navigator.serviceWorker.controller) {
+                        console.log('🔄 Новая версия доступна');
+                        window.location.reload();
+                    }
+                }
+            };
+        };
+    });
+}
