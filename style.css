@@ -1398,3 +1398,9 @@ body {
         transform: translateY(0);
     }
 }
+.empty-history {
+    text-align: center;
+    padding: 30px;
+    color: var(--hint-color);
+    font-style: italic;
+}

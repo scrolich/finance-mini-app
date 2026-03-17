@@ -226,27 +226,52 @@ function setActiveAccount(accountId) {
 
 function filterTransactionsByAccount() {
     const accountTransactions = appState.transactions.filter(t => t.accountId === appState.activeAccount);
+    console.log('📊 Транзакции для счета', appState.activeAccount, ':', accountTransactions.length);
     updateHistory(accountTransactions);
 }
 
 function updateHistory(transactions) {
     const historyEl = document.getElementById('history');
-    if (!historyEl) return;
+    if (!historyEl) {
+        console.log('❌ Элемент history не найден');
+        return;
+    }
+
+    console.log('📜 Обновление истории, транзакций:', transactions.length);
+
+    if (!transactions || transactions.length === 0) {
+        historyEl.innerHTML = '<div class="empty-history">Нет операций</div>';
+        return;
+    }
+
     historyEl.innerHTML = '';
+
+    // Берем последние 10 транзакций и показываем в обратном порядке (сначала новые)
     transactions.slice(-10).reverse().forEach(t => {
-        const date = new Date(t.date).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        historyEl.innerHTML += `
-            <div class="history-item">
-                <div class="history-left">
-                    <span class="history-category">${getCategoryName(t.category)}</span>
-                    <span class="history-desc">${t.description || '—'}</span>
+        const date = new Date(t.date).toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const categoryName = getCategoryName(t.category);
+
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.innerHTML = `
+            <div class="history-left">
+                <span class="history-category">${categoryName}</span>
+                <span class="history-desc">${t.description || '—'}</span>
+            </div>
+            <div class="history-right">
+                <div class="history-amount ${t.type === 'income' ? 'income' : 'expense'}">
+                    ${t.type === 'income' ? '+' : '-'}${formatMoney(t.amount)}
                 </div>
-                <div class="history-right">
-                    <div class="history-amount ${t.type === 'income' ? 'income' : 'expense'}">${t.type === 'income' ? '+' : '-'}${formatMoney(t.amount)}</div>
-                    <div class="history-date">${date}</div>
-                </div>
+                <div class="history-date">${date}</div>
             </div>
         `;
+        historyEl.appendChild(item);
     });
 }
 
@@ -277,6 +302,9 @@ function updateAccountStats() {
 function updateUI() {
     const activeAccount = appState.accounts.find(a => a.id === appState.activeAccount);
     if (activeAccount) document.getElementById('balance').textContent = formatMoney(activeAccount.balance);
+
+    // Фильтруем транзакции для активного счета и обновляем историю
+    filterTransactionsByAccount(); // ← эта функция вызывает updateHistory
 
     if (currentTab === 'main') {
         updateStatsByPeriod();
