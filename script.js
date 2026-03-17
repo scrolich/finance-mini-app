@@ -226,7 +226,6 @@ function setActiveAccount(accountId) {
 
 function filterTransactionsByAccount() {
     const accountTransactions = appState.transactions.filter(t => t.accountId === appState.activeAccount);
-    console.log('📊 Транзакции для счета', appState.activeAccount, ':', accountTransactions.length);
     updateHistory(accountTransactions);
 }
 
@@ -236,8 +235,6 @@ function updateHistory(transactions) {
         console.log('❌ Элемент history не найден');
         return;
     }
-
-    console.log('📜 Обновление истории, транзакций:', transactions.length);
 
     if (!transactions || transactions.length === 0) {
         historyEl.innerHTML = '<div class="empty-history">Нет операций</div>';
@@ -268,7 +265,7 @@ function updateHistory(transactions) {
 
         const item = document.createElement('div');
         item.className = 'history-item';
-        item.setAttribute('title', fullDate); // Полная дата при наведении
+        item.setAttribute('title', fullDate);
         item.innerHTML = `
             <div class="history-left">
                 <span class="history-category">${categoryName}</span>
@@ -279,44 +276,6 @@ function updateHistory(transactions) {
                     ${t.type === 'income' ? '+' : '-'}${formatMoney(t.amount)}
                 </div>
                 <div class="history-date">${formattedDate}</div>
-            </div>
-        `;
-        historyEl.appendChild(item);
-    });
-}
-
-    console.log('📜 Обновление истории, транзакций:', transactions.length);
-
-    if (!transactions || transactions.length === 0) {
-        historyEl.innerHTML = '<div class="empty-history">Нет операций</div>';
-        return;
-    }
-
-    historyEl.innerHTML = '';
-
-    // Берем последние 10 транзакций и показываем в обратном порядке (сначала новые)
-    transactions.slice(-10).reverse().forEach(t => {
-        const date = new Date(t.date).toLocaleString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        const categoryName = getCategoryName(t.category);
-
-        const item = document.createElement('div');
-        item.className = 'history-item';
-        item.innerHTML = `
-            <div class="history-left">
-                <span class="history-category">${categoryName}</span>
-                <span class="history-desc">${t.description || '—'}</span>
-            </div>
-            <div class="history-right">
-                <div class="history-amount ${t.type === 'income' ? 'income' : 'expense'}">
-                    ${t.type === 'income' ? '+' : '-'}${formatMoney(t.amount)}
-                </div>
-                <div class="history-date">${date}</div>
             </div>
         `;
         historyEl.appendChild(item);
@@ -351,8 +310,7 @@ function updateUI() {
     const activeAccount = appState.accounts.find(a => a.id === appState.activeAccount);
     if (activeAccount) document.getElementById('balance').textContent = formatMoney(activeAccount.balance);
 
-    // Фильтруем транзакции для активного счета и обновляем историю
-    filterTransactionsByAccount(); // ← эта функция вызывает updateHistory
+    filterTransactionsByAccount();
 
     if (currentTab === 'main') {
         updateStatsByPeriod();
@@ -1306,12 +1264,11 @@ function updateCategoryAnalysis() {
         if (t.category !== selectedAnalysisCategory) return false;
         const tDate = new Date(t.date);
         return tDate >= startDate && tDate <= endDate;
-    }).sort((a, b) => new Date(b.date) - new Date(a.date)); // Сортируем от новых к старым
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
     const total = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
     document.getElementById('selectedCategoryTotal').textContent = formatMoney(total);
 
-    // Обновляем количество операций
     const countEl = document.getElementById('categoryTransactionCount');
     if (countEl) {
         countEl.textContent = `${categoryTransactions.length} операций`;
@@ -1380,68 +1337,6 @@ function updateCategoriesList() {
     if (expenseList) {
         expenseList.innerHTML = getCategoriesHTML('expense');
     }
-}
-
-function showCategoryDetail(categoryId, categoryName, categoryIcon) {
-    const modal = document.getElementById('categoryDetailModal');
-    if (!modal) return;
-
-    // Устанавливаем иконку и название
-    document.getElementById('detailCategoryIcon').textContent = categoryIcon || '📊';
-    document.getElementById('detailCategoryName').textContent = categoryName;
-
-    // Получаем транзакции по категории
-    const categoryTransactions = appState.transactions.filter(t =>
-        t.category === categoryId && t.type === 'expense'
-    ).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Считаем статистику
-    const total = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const avg = categoryTransactions.length ? total / categoryTransactions.length : 0;
-    const max = categoryTransactions.length ? Math.max(...categoryTransactions.map(t => t.amount)) : 0;
-
-    // Обновляем статистику
-    document.getElementById('detailCategoryTotal').textContent = formatMoney(total);
-    document.getElementById('detailTransactionCount').textContent = categoryTransactions.length;
-    document.getElementById('detailAverageAmount').textContent = formatMoney(avg);
-    document.getElementById('detailMaxAmount').textContent = formatMoney(max);
-
-    // Заполняем список транзакций
-    const list = document.getElementById('detailTransactionsList');
-    list.innerHTML = '';
-
-    categoryTransactions.slice(0, 20).forEach(t => {
-        const date = new Date(t.date);
-        const formattedDateTime = date.toLocaleString('ru-RU', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        const timeOnly = date.toLocaleString('ru-RU', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        const account = appState.accounts.find(a => a.id === t.accountId);
-        const accountName = account ? account.name.split(' ')[1] || account.name : 'Основной';
-
-        list.innerHTML += `
-            <div class="detail-transaction-item" title="${formattedDateTime}">
-                <div class="detail-transaction-date">
-                    <div>${formattedDateTime.split(',')[0]}</div>
-                    <div class="transaction-time">${timeOnly}</div>
-                </div>
-                <span class="detail-transaction-amount">${formatMoney(t.amount)}</span>
-                <span class="detail-transaction-account">${accountName}</span>
-            </div>
-        `;
-    });
-
-    // Показываем модалку
-    modal.style.display = 'flex';
 }
 
 function getCategoriesHTML(type) {
@@ -1742,108 +1637,60 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
 }
 
-// ===== ПРИНУДИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ ДЛЯ PWA =====
-(function() {
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                  window.navigator.standalone === true;
-
-    if (isPWA) {
-        console.log('📱 PWA режим: принудительная загрузка данных');
-
-        // Загружаем данные из localStorage браузера
-        // (они там есть, если ты заходил через браузер)
-        const browserData = localStorage.getItem('financeData');
-        if (browserData) {
-            try {
-                const parsed = JSON.parse(browserData);
-                // Сравниваем с текущими данными PWA
-                if (JSON.stringify(parsed) !== JSON.stringify(appState)) {
-                    console.log('🔄 Обнаружены новые данные из браузера');
-                    appState = parsed;
-
-                    // Инициализируем все заново
-                    if (typeof initializeAccounts === 'function') initializeAccounts();
-                    if (typeof updateCategorySelector === 'function') updateCategorySelector();
-                    if (typeof updateAnalyticsCategorySelector === 'function') updateAnalyticsCategorySelector();
-                    if (typeof updateUI === 'function') updateUI();
-
-                    // Сохраняем в PWA хранилище
-                    saveData();
-                }
-            } catch (e) {
-                console.log('❌ Ошибка парсинга:', e);
-            }
-        }
-
-        // Проверяем каждые 2 секунды
-        setInterval(() => {
-            const browserData = localStorage.getItem('financeData');
-            if (browserData) {
-                try {
-                    const parsed = JSON.parse(browserData);
-                    if (JSON.stringify(parsed) !== JSON.stringify(appState)) {
-                        console.log('🔄 Обновление данных в PWA');
-                        appState = parsed;
-                        if (typeof initializeAccounts === 'function') initializeAccounts();
-                        if (typeof updateCategorySelector === 'function') updateCategorySelector();
-                        if (typeof updateAnalyticsCategorySelector === 'function') updateAnalyticsCategorySelector();
-                        if (typeof updateUI === 'function') updateUI();
-                        saveData();
-                    }
-                } catch (e) {}
-            }
-        }, 2000);
-    }
-})();
-
-// ===== ХАК ДЛЯ iOS PWA =====
-(function() {
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                  window.navigator.standalone === true;
-
-    if (isPWA) {
-        console.log('📱 PWA режим: включаем слежку за Safari');
-
-        // Каждые 2 секунды проверяем данные в cookies
-        setInterval(() => {
-            const cookieData = document.cookie.replace(/(?:(?:^|.*;\s*)financeData\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-
-            if (cookieData) {
-                try {
-                    const parsed = JSON.parse(decodeURIComponent(cookieData));
-                    if (JSON.stringify(parsed) !== JSON.stringify(appState)) {
-                        console.log('🔄 Обновляем из cookies');
-                        appState = parsed;
-                        localStorage.setItem('financeData', cookieData);
-
-                        if (typeof initializeAccounts === 'function') initializeAccounts();
-                        if (typeof updateCategorySelector === 'function') updateCategorySelector();
-                        if (typeof updateAnalyticsCategorySelector === 'function') updateAnalyticsCategorySelector();
-                        if (typeof updateUI === 'function') updateUI();
-                    }
-                } catch (e) {}
-            }
-        }, 2000);
-
-        // Перехватываем saveData
-        const originalSaveData = window.saveData;
-        window.saveData = function() {
-            if (originalSaveData) originalSaveData();
-            // Дублируем в cookies
-            document.cookie = 'financeData=' + encodeURIComponent(localStorage.getItem('financeData')) + '; path=/; max-age=86400';
-        };
-    } else {
-        // В браузере — сохраняем в cookies при изменении
-        window.addEventListener('finance-data-changed', () => {
-            document.cookie = 'financeData=' + encodeURIComponent(localStorage.getItem('financeData')) + '; path=/; max-age=86400';
-        });
-    }
-})();
-
 // ===== ДЕТАЛЬНЫЙ ПРОСМОТР КАТЕГОРИИ =====
 function showCategoryDetail(categoryId, categoryName, categoryIcon) {
-    const modal = document.getElementById('categoryDetailModal');
-    if (!modal) return;
+    // Проверяем, существует ли модальное окно, если нет - создаем
+    let modal = document.getElementById('categoryDetailModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'categoryDetailModal';
+        modal.className = 'category-detail-modal';
+        modal.innerHTML = `
+            <div class="category-detail-content">
+                <div class="category-detail-header">
+                    <div>
+                        <span class="category-detail-icon" id="detailCategoryIcon">🍔</span>
+                        <span class="category-detail-name" id="detailCategoryName">Продукты</span>
+                    </div>
+                    <button class="close-btn" onclick="hideCategoryDetail()">✖</button>
+                </div>
+
+                <div class="category-detail-total">
+                    <div class="total-label">Всего потрачено</div>
+                    <div class="total-amount" id="detailCategoryTotal">0 ₽</div>
+                </div>
+
+                <div class="category-detail-stats">
+                    <div class="stat-chip">
+                        <span class="stat-chip-label">Операций</span>
+                        <span class="stat-chip-value" id="detailTransactionCount">0</span>
+                    </div>
+                    <div class="stat-chip">
+                        <span class="stat-chip-label">Средний чек</span>
+                        <span class="stat-chip-value" id="detailAverageAmount">0 ₽</span>
+                    </div>
+                    <div class="stat-chip">
+                        <span class="stat-chip-label">Макс.</span>
+                        <span class="stat-chip-value" id="detailMaxAmount">0 ₽</span>
+                    </div>
+                </div>
+
+                <div class="category-detail-list">
+                    <div class="list-header">
+                        <span>Дата / Время</span>
+                        <span>Сумма</span>
+                        <span>Счет</span>
+                    </div>
+                    <div id="detailTransactionsList" class="transactions-detail-list"></div>
+                </div>
+
+                <div class="category-detail-footer">
+                    <button class="btn btn-small" onclick="hideCategoryDetail()">Закрыть</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
 
     // Устанавливаем иконку и название
     document.getElementById('detailCategoryIcon').textContent = categoryIcon || '📊';
@@ -1870,16 +1717,29 @@ function showCategoryDetail(categoryId, categoryName, categoryIcon) {
     list.innerHTML = '';
 
     categoryTransactions.slice(0, 20).forEach(t => {
-        const date = new Date(t.date).toLocaleDateString('ru-RU', {
-            day: 'numeric', month: 'long', year: 'numeric'
+        const date = new Date(t.date);
+        const formattedDateTime = date.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const timeOnly = date.toLocaleString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit'
         });
 
         const account = appState.accounts.find(a => a.id === t.accountId);
-        const accountName = account ? account.name.split(' ')[1] || account.name : 'Основной';
+        const accountName = account ? (account.name.split(' ')[1] || account.name) : 'Основной';
 
         list.innerHTML += `
-            <div class="detail-transaction-item">
-                <span class="detail-transaction-date">${date}</span>
+            <div class="detail-transaction-item" title="${formattedDateTime}">
+                <div class="detail-transaction-date">
+                    <div>${formattedDateTime.split(',')[0]}</div>
+                    <div class="transaction-time">${timeOnly}</div>
+                </div>
                 <span class="detail-transaction-amount">${formatMoney(t.amount)}</span>
                 <span class="detail-transaction-account">${accountName}</span>
             </div>
@@ -1891,15 +1751,6 @@ function showCategoryDetail(categoryId, categoryName, categoryIcon) {
 }
 
 function hideCategoryDetail() {
-    document.getElementById('categoryDetailModal').style.display = 'none';
+    const modal = document.getElementById('categoryDetailModal');
+    if (modal) modal.style.display = 'none';
 }
-
-// Добавляем клик по категории в графике
-function makeCategoriesClickable() {
-    const canvas = document.getElementById('categoriesChart');
-    if (canvas) {
-        canvas.style.cursor = 'pointer';
-    }
-}
-
-// Вызываем после создания графика
