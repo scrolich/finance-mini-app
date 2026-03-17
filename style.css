@@ -1404,3 +1404,44 @@ body {
     color: var(--hint-color);
     font-style: italic;
 }
+
+/* Время в истории */
+.history-date {
+    font-size: 11px;
+    color: var(--hint-color);
+    margin-top: 2px;
+    white-space: nowrap;
+}
+
+/* Время в деталях категории */
+.transaction-time {
+    font-size: 10px;
+    color: var(--hint-color);
+    margin-top: 2px;
+}
+
+.detail-transaction-date {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-transaction-date .transaction-time {
+    font-size: 10px;
+    color: var(--hint-color);
+}
+
+/* Полная дата при наведении */
+.history-item, .transaction-item, .detail-transaction-item {
+    cursor: help;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 400px) {
+    .history-date {
+        font-size: 10px;
+    }
+
+    .transaction-time {
+        font-size: 9px;
+    }
+}

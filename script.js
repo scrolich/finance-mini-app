@@ -248,6 +248,54 @@ function updateHistory(transactions) {
 
     // Берем последние 10 транзакций и показываем в обратном порядке (сначала новые)
     transactions.slice(-10).reverse().forEach(t => {
+        const date = new Date(t.date);
+        const formattedDate = date.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const fullDate = date.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const categoryName = getCategoryName(t.category);
+
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.setAttribute('title', fullDate); // Полная дата при наведении
+        item.innerHTML = `
+            <div class="history-left">
+                <span class="history-category">${categoryName}</span>
+                <span class="history-desc">${t.description || '—'}</span>
+            </div>
+            <div class="history-right">
+                <div class="history-amount ${t.type === 'income' ? 'income' : 'expense'}">
+                    ${t.type === 'income' ? '+' : '-'}${formatMoney(t.amount)}
+                </div>
+                <div class="history-date">${formattedDate}</div>
+            </div>
+        `;
+        historyEl.appendChild(item);
+    });
+}
+
+    console.log('📜 Обновление истории, транзакций:', transactions.length);
+
+    if (!transactions || transactions.length === 0) {
+        historyEl.innerHTML = '<div class="empty-history">Нет операций</div>';
+        return;
+    }
+
+    historyEl.innerHTML = '';
+
+    // Берем последние 10 транзакций и показываем в обратном порядке (сначала новые)
+    transactions.slice(-10).reverse().forEach(t => {
         const date = new Date(t.date).toLocaleString('ru-RU', {
             day: '2-digit',
             month: '2-digit',
@@ -1258,31 +1306,47 @@ function updateCategoryAnalysis() {
         if (t.category !== selectedAnalysisCategory) return false;
         const tDate = new Date(t.date);
         return tDate >= startDate && tDate <= endDate;
-    });
+    }).sort((a, b) => new Date(b.date) - new Date(a.date)); // Сортируем от новых к старым
 
     const total = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
     document.getElementById('selectedCategoryTotal').textContent = formatMoney(total);
 
+    // Обновляем количество операций
+    const countEl = document.getElementById('categoryTransactionCount');
+    if (countEl) {
+        countEl.textContent = `${categoryTransactions.length} операций`;
+    }
+
     if (categoryTransactions.length > 0) {
         document.getElementById('categoryTransactionsCard').style.display = 'block';
-        document.getElementById('categoryTransactionCount').textContent =
-            `${categoryTransactions.length} операций`;
 
         const list = document.getElementById('categoryTransactionsList');
-        list.innerHTML = categoryTransactions
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .map(t => {
-                const date = new Date(t.date).toLocaleDateString('ru-RU');
-                return `
-                    <div class="transaction-item">
-                        <div>
-                            <div class="transaction-date">${date}</div>
-                            <div class="transaction-desc">${t.description || '—'}</div>
-                        </div>
-                        <div class="transaction-amount">${formatMoney(t.amount)}</div>
+        list.innerHTML = categoryTransactions.map(t => {
+            const date = new Date(t.date);
+            const formattedDate = date.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const timeOnly = date.toLocaleString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return `
+                <div class="transaction-item" title="${formattedDate}">
+                    <div>
+                        <div class="transaction-date">${formattedDate.split(',')[0]}</div>
+                        <div class="transaction-time">${timeOnly}</div>
+                        <div class="transaction-desc">${t.description || '—'}</div>
                     </div>
-                `;
-            }).join('');
+                    <div class="transaction-amount">${formatMoney(t.amount)}</div>
+                </div>
+            `;
+        }).join('');
     } else {
         document.getElementById('categoryTransactionsCard').style.display = 'none';
     }
@@ -1316,6 +1380,68 @@ function updateCategoriesList() {
     if (expenseList) {
         expenseList.innerHTML = getCategoriesHTML('expense');
     }
+}
+
+function showCategoryDetail(categoryId, categoryName, categoryIcon) {
+    const modal = document.getElementById('categoryDetailModal');
+    if (!modal) return;
+
+    // Устанавливаем иконку и название
+    document.getElementById('detailCategoryIcon').textContent = categoryIcon || '📊';
+    document.getElementById('detailCategoryName').textContent = categoryName;
+
+    // Получаем транзакции по категории
+    const categoryTransactions = appState.transactions.filter(t =>
+        t.category === categoryId && t.type === 'expense'
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Считаем статистику
+    const total = categoryTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const avg = categoryTransactions.length ? total / categoryTransactions.length : 0;
+    const max = categoryTransactions.length ? Math.max(...categoryTransactions.map(t => t.amount)) : 0;
+
+    // Обновляем статистику
+    document.getElementById('detailCategoryTotal').textContent = formatMoney(total);
+    document.getElementById('detailTransactionCount').textContent = categoryTransactions.length;
+    document.getElementById('detailAverageAmount').textContent = formatMoney(avg);
+    document.getElementById('detailMaxAmount').textContent = formatMoney(max);
+
+    // Заполняем список транзакций
+    const list = document.getElementById('detailTransactionsList');
+    list.innerHTML = '';
+
+    categoryTransactions.slice(0, 20).forEach(t => {
+        const date = new Date(t.date);
+        const formattedDateTime = date.toLocaleString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const timeOnly = date.toLocaleString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const account = appState.accounts.find(a => a.id === t.accountId);
+        const accountName = account ? account.name.split(' ')[1] || account.name : 'Основной';
+
+        list.innerHTML += `
+            <div class="detail-transaction-item" title="${formattedDateTime}">
+                <div class="detail-transaction-date">
+                    <div>${formattedDateTime.split(',')[0]}</div>
+                    <div class="transaction-time">${timeOnly}</div>
+                </div>
+                <span class="detail-transaction-amount">${formatMoney(t.amount)}</span>
+                <span class="detail-transaction-account">${accountName}</span>
+            </div>
+        `;
+    });
+
+    // Показываем модалку
+    modal.style.display = 'flex';
 }
 
 function getCategoriesHTML(type) {
