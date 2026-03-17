@@ -496,10 +496,9 @@ function saveTransaction() {
     const dateInput = document.getElementById('transactionDate');
 
     if (!amountInput || !categorySelect) {
-        alert('Ошибка: форма не загружена');
+        console.log('Ошибка: форма не загружена');
         return;
     }
-}
 
     const amount = parseFloat(amountInput.value);
     const category = categorySelect.value;
@@ -507,18 +506,18 @@ function saveTransaction() {
     const date = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
 
     if (isNaN(amount) || amount <= 0) {
-        alert('Введите корректную сумму');
+        console.log('Введите корректную сумму');
         return;
     }
 
     const account = appState.accounts.find(a => a.id === appState.activeAccount);
     if (!account) {
-        alert('Ошибка: выберите счет');
+        console.log('Ошибка: выберите счет');
         return;
     }
 
     if (currentType === 'expense' && account.balance < amount) {
-        alert(`❌ Недостаточно средств на счете "${account.name}"`);
+        console.log(`❌ Недостаточно средств на счете "${account.name}"`);
         return;
     }
 
@@ -545,8 +544,7 @@ function saveTransaction() {
     updateUI();
     saveData();
     hideForm();
-
-
+}
 
 function showTransferForm() {
     const app = document.getElementById('app');
@@ -589,18 +587,18 @@ function transferMoney() {
     const amount = parseFloat(amountInput.value);
 
     if (fromId === toId) {
-        alert('Нельзя перевести на тот же счет');
+        console.log('Нельзя перевести на тот же счет');
         return;
     }
 
     if (isNaN(amount) || amount <= 0) {
-        alert('Введите корректную сумму');
+        console.log('Введите корректную сумму');
         return;
     }
 
     const fromAccount = appState.accounts.find(a => a.id === fromId);
     if (fromAccount.balance < amount) {
-        alert('Недостаточно средств');
+        console.log('Недостаточно средств');
         return;
     }
 
@@ -635,7 +633,6 @@ function transferMoney() {
     setActiveAccount(appState.activeAccount);
     saveData();
     hideTransferForm();
-
 }
 
 function showAccountForm() {
@@ -672,7 +669,7 @@ function saveAccount() {
     const balance = parseFloat(balanceInput.value) || 0;
 
     if (!name) {
-        alert('Введите название счета');
+        console.log('Введите название счета');
         return;
     }
 
@@ -704,7 +701,6 @@ function saveAccount() {
     updateAccountsSummary();
     saveData();
     hideAccountForm();
-
 }
 
 function resetAllData() {
@@ -800,8 +796,8 @@ function savePlan() {
     const recurring = recurringSelect.value;
     const accountId = accountSelect.value;
 
-    if (!name) { alert('Введите название плана'); return; }
-    if (isNaN(amount) || amount <= 0) { alert('Введите корректную сумму'); return; }
+    if (!name) { console.log('Введите название плана'); return; }
+    if (isNaN(amount) || amount <= 0) { console.log('Введите корректную сумму'); return; }
 
     const plan = {
         id: 'plan_' + Date.now(),
@@ -820,7 +816,6 @@ function savePlan() {
     updatePlans();
     saveData();
     hidePlanForm();
-
 }
 
 function updatePlans() {
@@ -889,7 +884,7 @@ function togglePlanComplete(planId, completed) {
         const account = appState.accounts.find(a => a.id === plan.accountId);
         if (account) {
             if (account.balance < plan.amount) {
-                alert(`⚠️ Недостаточно средств на счете "${account.name}"`);
+                console.log(`⚠️ Недостаточно средств на счете "${account.name}"`);
                 const checkbox = document.querySelector(`input[onchange*="${planId}"]`);
                 if (checkbox) checkbox.checked = false;
                 return;
@@ -919,8 +914,6 @@ function togglePlanComplete(planId, completed) {
                     createdAt: new Date().toISOString()
                 });
             }
-
-            alert(`✅ Расход добавлен: ${formatMoney(plan.amount)}`);
         }
     }
 
@@ -964,7 +957,7 @@ function editAccount(accountId) {
 
 function deleteAccount(accountId) {
     if (appState.accounts.length <= 1) {
-        alert('Нельзя удалить последний счет');
+        console.log('Нельзя удалить последний счет');
         return;
     }
 
@@ -1007,7 +1000,7 @@ function setInitialBalanceFromModal() {
     const balance = parseFloat(input.value);
 
     if (isNaN(balance) || balance < 0) {
-        alert('Введите корректную сумму');
+        console.log('Введите корректную сумму');
         return;
     }
 
@@ -1034,7 +1027,6 @@ function setInitialBalanceFromModal() {
     updateUI();
     saveData();
     hideInitialBalanceModal();
-
 }
 
 function skipInitialBalance() {
@@ -1079,7 +1071,7 @@ function saveCategory() {
     const color = colorInput.value;
 
     if (!name) {
-        alert('Введите название категории');
+        console.log('Введите название категории');
         return;
     }
 
@@ -1101,7 +1093,6 @@ function saveCategory() {
     updateCategoriesList();
     saveData();
     hideCategoryForm();
-
 }
 
 function updateCategorySelector() {
@@ -1390,7 +1381,7 @@ function applyCustomPeriod() {
     const end = endInput.value;
 
     if (!start || !end) {
-        alert('Выберите даты');
+        console.log('Выберите даты');
         return;
     }
 
