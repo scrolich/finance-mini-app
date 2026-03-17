@@ -1602,3 +1602,57 @@ document.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
 }
+
+// ===== ПРИНУДИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ ДЛЯ PWA =====
+(function() {
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                  window.navigator.standalone === true;
+
+    if (isPWA) {
+        console.log('📱 PWA режим: принудительная загрузка данных');
+
+        // Загружаем данные из localStorage браузера
+        // (они там есть, если ты заходил через браузер)
+        const browserData = localStorage.getItem('financeData');
+        if (browserData) {
+            try {
+                const parsed = JSON.parse(browserData);
+                // Сравниваем с текущими данными PWA
+                if (JSON.stringify(parsed) !== JSON.stringify(appState)) {
+                    console.log('🔄 Обнаружены новые данные из браузера');
+                    appState = parsed;
+
+                    // Инициализируем все заново
+                    if (typeof initializeAccounts === 'function') initializeAccounts();
+                    if (typeof updateCategorySelector === 'function') updateCategorySelector();
+                    if (typeof updateAnalyticsCategorySelector === 'function') updateAnalyticsCategorySelector();
+                    if (typeof updateUI === 'function') updateUI();
+
+                    // Сохраняем в PWA хранилище
+                    saveData();
+                }
+            } catch (e) {
+                console.log('❌ Ошибка парсинга:', e);
+            }
+        }
+
+        // Проверяем каждые 2 секунды
+        setInterval(() => {
+            const browserData = localStorage.getItem('financeData');
+            if (browserData) {
+                try {
+                    const parsed = JSON.parse(browserData);
+                    if (JSON.stringify(parsed) !== JSON.stringify(appState)) {
+                        console.log('🔄 Обновление данных в PWA');
+                        appState = parsed;
+                        if (typeof initializeAccounts === 'function') initializeAccounts();
+                        if (typeof updateCategorySelector === 'function') updateCategorySelector();
+                        if (typeof updateAnalyticsCategorySelector === 'function') updateAnalyticsCategorySelector();
+                        if (typeof updateUI === 'function') updateUI();
+                        saveData();
+                    }
+                } catch (e) {}
+            }
+        }, 2000);
+    }
+})();
