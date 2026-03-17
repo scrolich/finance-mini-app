@@ -545,8 +545,7 @@ function saveTransaction() {
     saveData();
     hideForm();
 
-    alert(`✅ ${currentType === 'income' ? 'Доход' : 'Расход'} добавлен: ${formatMoney(amount)}`);
-}
+
 
 function showTransferForm() {
     const app = document.getElementById('app');
@@ -636,7 +635,6 @@ function transferMoney() {
     saveData();
     hideTransferForm();
 
-    alert(`✅ Перевод выполнен: ${formatMoney(amount)}`);
 }
 
 function showAccountForm() {
@@ -706,7 +704,6 @@ function saveAccount() {
     saveData();
     hideAccountForm();
 
-    alert(`✅ Счет "${name}" создан`);
 }
 
 function resetAllData() {
@@ -715,7 +712,6 @@ function resetAllData() {
         localStorage.removeItem('financeData');
         initializeAccounts();
         updateUI();
-        alert('✅ Все данные сброшены');
     }
 }
 
@@ -824,7 +820,6 @@ function savePlan() {
     saveData();
     hidePlanForm();
 
-    alert(`✅ План "${name}" добавлен`);
 }
 
 function updatePlans() {
@@ -1039,7 +1034,6 @@ function setInitialBalanceFromModal() {
     saveData();
     hideInitialBalanceModal();
 
-    alert(`✅ Начальный баланс установлен: ${formatMoney(balance)}`);
 }
 
 function skipInitialBalance() {
@@ -1107,7 +1101,6 @@ function saveCategory() {
     saveData();
     hideCategoryForm();
 
-    alert(`✅ Категория "${name}" создана`);
 }
 
 function updateCategorySelector() {
