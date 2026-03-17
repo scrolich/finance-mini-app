@@ -1,47 +1,20 @@
+// ===== ЗАГРУЗКА И СОХРАНЕНИЕ =====
 const STORAGE_KEY = 'financeData';
 
-// загрузка
 function loadData() {
     const data = localStorage.getItem(STORAGE_KEY);
     return data ? JSON.parse(data) : null;
 }
 
-// сохранение
-function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-// Глобальная переменная для отслеживания режима
-const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-              window.navigator.standalone === true;
-
-console.log('🚀 Запуск в режиме:', isPWA ? 'PWA (иконка)' : 'Браузер');
-
-// Функция принудительной синхронизации
-function forceSync() {
-    console.log('🔄 Принудительная синхронизация...');
-    const data = localStorage.getItem('financeData');
-    if (data) {
-        try {
-            appState = JSON.parse(data);
-            initializeAccounts();
-            updateUI();
-            console.log('✅ Данные синхронизированы');
-        } catch (e) {
-            console.log('❌ Ошибка синхронизации:', e);
-        }
+function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    console.log('✅ Данные сохранены');
+    if (window.dispatchEvent) {
+        window.dispatchEvent(new Event('finance-data-changed'));
     }
 }
 
-
-// Если это PWA, проверяем при каждом фокусе
-if (isPWA) {
-    window.addEventListener('focus', () => {
-        console.log('👆 PWA получило фокус, проверяем данные...');
-        forceSync();
-    });
-}
-
+// ===== НАЧАЛЬНОЕ СОСТОЯНИЕ =====
 const defaultState = {
     accounts: [
         {
@@ -64,8 +37,9 @@ const defaultState = {
     }
 };
 
-let appState = loadData() || defaultState;
+let appState = loadData() || JSON.parse(JSON.stringify(defaultState));
 
+// ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
 let categoriesChart = null;
 let dailyChart = null;
 let balanceChart = null;
@@ -81,38 +55,90 @@ let selectedEmoji = '💰';
 let currentTab = 'main';
 let selectedAnalysisCategory = null;
 
-// Данные для эмодзи по категориям
+// ===== ГЛОБАЛЬНЫЕ ССЫЛКИ =====
+window.appState = appState;
+window.updateUI = updateUI;
+window.saveData = saveData;
+
+// ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+function formatMoney(amount) {
+    let value = amount * exchangeRates[currentCurrency];
+    if (currentCurrency === 'RUB') return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';
+    if (currentCurrency === 'USD') return '$' + value.toFixed(2);
+    return '€' + value.toFixed(2);
+}
+
+function getCategoryName(category) {
+    if (appState.customCategories) {
+        for (let type of ['income', 'expense']) {
+            const found = appState.customCategories[type]?.find(c => c.id === category);
+            if (found) return `${found.icon} ${found.name}`;
+        }
+    }
+    const categories = {
+        'salary': '💼 Зарплата',
+        'gifts': '🎁 Подарки',
+        'investments': '📈 Инвестиции',
+        'freelance': '💻 Фриланс',
+        'food': '🍔 Еда',
+        'housing': '🏠 Жилье',
+        'transport': '🚗 Транспорт',
+        'clothes': '👕 Одежда',
+        'health': '💊 Здоровье',
+        'entertainment': '🎮 Развлечения',
+        'education': '📚 Образование',
+        'pets': '🐶 Животные',
+        'communication': '📱 Связь',
+        'gifts_expense': '🎁 Подарки',
+        'work': '💼 Работа',
+        'initial': '💰 Начальный баланс',
+        'transfer': '🔄 Перевод'
+    };
+    return categories[category] || category;
+}
+
+// ===== PWA ПРОВЕРКА =====
+const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+              window.navigator.standalone === true;
+console.log('🚀 Запуск в режиме:', isPWA ? 'PWA (иконка)' : 'Браузер');
+
+// ===== СИНХРОНИЗАЦИЯ =====
+function forceSync() {
+    console.log('🔄 Принудительная синхронизация...');
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (data) {
+        try {
+            appState = JSON.parse(data);
+            initializeAccounts();
+            updateUI();
+            console.log('✅ Данные синхронизированы');
+        } catch (e) {
+            console.log('❌ Ошибка синхронизации:', e);
+        }
+    }
+}
+
+if (isPWA) {
+    window.addEventListener('focus', forceSync);
+}
+
+// ===== ДАННЫЕ ДЛЯ ЭМОДЗИ =====
 const emojiData = {
     all: ['🍔', '🍕', '🍣', '🍜', '🍝', '🍱', '🍛', '🍙', '🍚', '🍘', '🍢', '🍡', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '☕', '🍵', '🥤', '🧃', '🧋', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🛵', '🏍️', '🚲', '🛴', '🚦', '🚧', '⛽', '🅿️', '🚉', '🚇', '✈️', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛳️', '⛴️', '🚢', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🗼', '⛲', '🌲', '🌳', '🌴', '🌵', '🌿', '🍀', '🍃', '🌱', '💊', '💉', '🩺', '🏥', '🤒', '🤕', '😷', '🤧', '🤮', '💪', '🦵', '🦶', '👂', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '🎮', '🎲', '🎯', '🎳', '🎰', '🎪', '🎨', '🎭', '🎤', '🎧', '🎸', '🎹', '🎺', '🎻', '🥁', '🎬', '📚', '📖', '📕', '📗', '📘', '📙', '📔', '📒', '📃', '📜', '📄', '📰', '🎓', '✏️', '✒️', '🖊️', '🖋️', '🖌️', '🖍️', '📝', '💼', '👔', '👕', '👖', '👗', '👘', '👙', '👚', '👛', '👜', '👝', '🎒', '👞', '👟', '👠', '👡', '👢', '👑', '👒', '🎩', '🎓', '🧢', '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎳', '🏏', '🏑', '🏒', '🏓', '🏸', '🥊', '🥋', '⛸️', '🎿', '⛷️', '🏂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘', '✈️', '🌍', '🌎', '🌏', '🗺️', '🧳', '⛱️', '🏖️', '🏝️', '🏜️', '🏔️', '⛰️', '🌋', '🏞️', '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐙', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🐢', '🐍', '🦎', '🐟', '🐠', '🐡', '🐬', '🐳', '🐋', '🦈', '🎁', '🎀', '🎊', '🎉', '🎈', '🪅', '🎎', '🎏', '🎐', '🧧', '💰', '💵', '💴', '💶', '💷', '💳', '💎', '⚖️', '📊', '📈', '📉', '💻', '🖥️', '💽', '💾', '💿', '📀', '📱', '📲', '☎️', '📞', '📟', '📠', '📺', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📼', '🔊', '📢', '📣', '🔔', '🎵', '🎶', '🎙️', '🎚️', '🎛️', '🎧', '📻', '🪄', '✨', '🌟', '⭐', '🌠', '⏰', '⌛', '📅', '📆', '🗓️', '🔒', '🔓', '🔑', '🗝️', '🔨', '🪛', '🔧', '🔩', '⚙️', '🧰', '🧲', '🔬', '🔭', '📡', '💡', '🔦', '🏮', '🪔', '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃', '📜', '📄', '📰', '🗞️', '📑', '🔖', '🏷️', '💰', '🪙', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️'],
-
     food: ['🍔', '🍕', '🍣', '🍜', '🍝', '🍱', '🍛', '🍙', '🍚', '🍘', '🍢', '🍡', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '☕', '🍵', '🥤', '🧃', '🧋', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃'],
-
     transport: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🛵', '🏍️', '🚲', '🛴', '🚦', '🚧', '⛽', '🅿️', '🚉', '🚇', '✈️', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛳️', '⛴️', '🚢'],
-
     shopping: ['🛍️', '👕', '👖', '👗', '👔', '👚', '🧥', '🧦', '👟', '👞', '👠', '👡', '👢', '🧢', '🎩', '👒', '🕶️', '👓', '💍', '⌚', '📱', '💻', '🖥️', '📷', '🎧', '🔋', '💡', '🕯️'],
-
     home: ['🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🛏️', '🛋️', '🚪', '🪑', '🛁', '🚿', '🧹', '🧺', '🧼', '🪣'],
-
     health: ['💊', '💉', '🩺', '🏥', '🤒', '🤕', '😷', '🤧', '🤮', '💪', '🦵', '🦶', '👂', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '🧘', '🏃', '🚶'],
-
     entertainment: ['🎮', '🎲', '🎯', '🎳', '🎰', '🎪', '🎨', '🎭', '🎤', '🎧', '🎸', '🎹', '🎺', '🎻', '🥁', '🎬', '📺', '📽️', '🎞️', '📚', '🎵', '🎶'],
-
     education: ['📚', '📖', '📕', '📗', '📘', '📙', '📔', '📒', '📃', '📜', '📄', '📰', '🎓', '✏️', '✒️', '🖊️', '🖋️', '🖌️', '🖍️', '📝', '📐', '📏', '🔬', '🔭'],
-
     work: ['💼', '👔', '📊', '📈', '📉', '📋', '📁', '🗂️', '📅', '📆', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📞', '💻', '🖥️', '🖨️', '⌨️', '🖱️'],
-
     sports: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎳', '🏏', '🏑', '🏒', '🏓', '🏸', '🥊', '🥋', '⛸️', '🎿', '⛷️', '🏂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘'],
-
     travel: ['✈️', '🌍', '🌎', '🌏', '🗺️', '🧳', '⛱️', '🏖️', '🏝️', '🏜️', '🏔️', '⛰️', '🌋', '🏞️', '🏕️', '🏟️', '🏛️', '🏗️', '🏘️', '🏙️'],
-
     pets: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐙', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🐢', '🐍', '🦎', '🐟', '🐠', '🐡', '🐬', '🐳', '🐋', '🦈'],
-
     gifts: ['🎁', '🎀', '🎊', '🎉', '🎈', '🪅', '🎎', '🎏', '🎐', '🧧', '💝', '💖', '💗', '💓', '💞', '💕', '💌'],
-
     finance: ['💰', '💵', '💴', '💶', '💷', '💳', '💎', '⚖️', '📊', '📈', '📉', '🏦', '🧾', '📑', '🔖', '🏷️'],
-
     tech: ['💻', '🖥️', '💽', '💾', '💿', '📀', '📱', '📲', '☎️', '📞', '📟', '📠', '📺', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📼', '🔊', '📢', '📣', '🔔', '🎵', '🎶', '🎙️', '🎚️', '🎛️', '🎧', '📻'],
-
     other: ['✨', '🌟', '⭐', '🌠', '⏰', '⌛', '📅', '📆', '🗓️', '🔒', '🔓', '🔑', '🗝️', '🔨', '🪛', '🔧', '🔩', '⚙️', '🧰', '🧲', '🔬', '🔭', '📡', '💡', '🔦', '🏮', '🪔']
 };
 
@@ -130,60 +156,7 @@ const ACCOUNT_TYPES = {
     investment: { name: 'Инвестиции', icon: '📈', color: '#9C27B0' }
 };
 
-// В самом начале script.js, после объявления переменных
-window.appState = appState;
-window.updateUI = updateUI;
-
-// Сохраняем оригинальную функцию saveData
-const originalSaveData = saveData;
-
-// Переопределяем saveData
-saveData = function() {
-    // Вызываем оригинальную функцию
-    originalSaveData();
-    console.log('✅ Данные сохранены, синхронизация...');
-
-    // Дополнительно оповещаем
-    if (window.dispatchEvent) {
-        window.dispatchEvent(new Event('finance-data-changed'));
-    }
-};
-
-window.saveData = saveData;
-
 // ===== ОСНОВНЫЕ ФУНКЦИИ =====
-
-function formatMoney(amount) {
-    let value = amount * exchangeRates[currentCurrency];
-    if (currentCurrency === 'RUB') return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';
-    if (currentCurrency === 'USD') return '$' + value.toFixed(2);
-    return '€' + value.toFixed(2);
-}
-
-function saveData() {
-    localStorage.setItem('financeData', JSON.stringify(appState));
-}
-
-function loadData() {
-    const saved = localStorage.getItem('financeData');
-    if (saved) {
-        try {
-            appState = JSON.parse(saved);
-            if (!appState.plans) appState.plans = [];
-            if (!appState.customCategories) {
-                appState.customCategories = { income: [], expense: [] };
-            }
-        } catch (e) {
-            console.log('Ошибка загрузки');
-        }
-    }
-    initializeAccounts();
-    updateCategorySelector(); // для форм
-    updateAnalyticsCategorySelector(); // для аналитики
-    updateUI();
-    setTimeout(checkFirstLaunch, 500);
-}
-
 function initializeAccounts() {
     if (!appState.accounts || appState.accounts.length === 0) {
         appState.accounts = [{
@@ -327,7 +300,6 @@ function updateBudgetUI() {
         }).reduce((sum, t) => sum + t.amount, 0);
         const percent = Math.min((monthExpenses / appState.budget) * 100, 100);
 
-        // Обновляем оба прогресс-бара
         const bar = document.getElementById('budgetBar');
         const barDetailed = document.getElementById('budgetBarDetailed');
         const spentEl = document.getElementById('spentAmount');
@@ -364,8 +336,6 @@ function showChart(type) {
 function updateCharts() {
     updateCategoriesChart();
     updateTotals();
-
-    // Если выбрана категория, обновляем её данные
     if (selectedAnalysisCategory) {
         updateCategoryAnalysis();
     }
@@ -396,20 +366,10 @@ function updateCategoriesChart() {
 
     if (categoriesChart) categoriesChart.destroy();
 
-    // Красивые насыщенные цвета для каждой категории
     const colors = [
-        '#FF6B6B', // ярко-красный
-        '#4ECDC4', // бирюзовый
-        '#FFD166', // желтый
-        '#A78BFA', // фиолетовый
-        '#F472B6', // розовый
-        '#6EE7B7', // мятный
-        '#FCD34D', // золотой
-        '#C084FC', // лавандовый
-        '#60A5FA', // синий
-        '#34D399', // изумрудный
-        '#F87171', // коралловый
-        '#818CF8'  // индиго
+        '#FF6B6B', '#4ECDC4', '#FFD166', '#A78BFA', '#F472B6',
+        '#6EE7B7', '#FCD34D', '#C084FC', '#60A5FA', '#34D399',
+        '#F87171', '#818CF8'
     ];
 
     categoriesChart = new Chart(ctx, {
@@ -419,16 +379,16 @@ function updateCategoriesChart() {
             datasets: [{
                 data: Object.values(expensesByCategory),
                 backgroundColor: colors.slice(0, Object.keys(expensesByCategory).length),
-                borderWidth: 0,
-                borderRadius: 8, // Закругленные края для объема
-                spacing: 4,      // Промежутки между секторами
-                offset: [0, 0, 0, 0], // Можно будет анимировать при наведении
+                borderWidth: 2,
+                borderColor: '#ffffff',
+                borderRadius: 8,
+                spacing: 4,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '0%', // Обычная круговая (не пончик)
+            cutout: '0%',
             plugins: {
                 legend: {
                     position: 'bottom',
@@ -458,32 +418,17 @@ function updateCategoriesChart() {
                 }
             },
             layout: {
-                padding: {
-                    top: 20,
-                    bottom: 20
-                }
+                padding: { top: 20, bottom: 20 }
             },
             elements: {
                 arc: {
-                    borderWidth: 2,
-                    borderColor: '#ffffff', // Белая обводка для объема
                     hoverBorderWidth: 3,
                     hoverBorderColor: '#ffffff',
-                    hoverOffset: 15 // Эффект вылета при наведении
+                    hoverOffset: 15
                 }
             }
         }
     });
-}
-
-function updateDailyChart() {
-    // Эта функция больше не используется, оставлена для совместимости
-    console.log('updateDailyChart вызван (заглушка)');
-}
-
-function updateBalanceChart() {
-    // Эта функция больше не используется, оставлена для совместимости
-    console.log('updateBalanceChart вызван (заглушка)');
 }
 
 function updateTotals() {
@@ -551,7 +496,7 @@ function saveTransaction() {
     const dateInput = document.getElementById('transactionDate');
 
     if (!amountInput || !categorySelect) {
-        tg.showAlert('Ошибка: форма не загружена');
+        alert('Ошибка: форма не загружена');
         return;
     }
 
@@ -561,18 +506,18 @@ function saveTransaction() {
     const date = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
 
     if (isNaN(amount) || amount <= 0) {
-        tg.showAlert('Введите корректную сумму');
+        alert('Введите корректную сумму');
         return;
     }
 
     const account = appState.accounts.find(a => a.id === appState.activeAccount);
     if (!account) {
-        tg.showAlert('Ошибка: выберите счет');
+        alert('Ошибка: выберите счет');
         return;
     }
 
     if (currentType === 'expense' && account.balance < amount) {
-        tg.showAlert(`❌ Недостаточно средств на счете "${account.name}"`);
+        alert(`❌ Недостаточно средств на счете "${account.name}"`);
         return;
     }
 
@@ -600,7 +545,7 @@ function saveTransaction() {
     saveData();
     hideForm();
 
-    tg.showAlert(`✅ ${currentType === 'income' ? 'Доход' : 'Расход'} добавлен: ${formatMoney(amount)}`);
+    alert(`✅ ${currentType === 'income' ? 'Доход' : 'Расход'} добавлен: ${formatMoney(amount)}`);
 }
 
 function showTransferForm() {
@@ -644,18 +589,18 @@ function transferMoney() {
     const amount = parseFloat(amountInput.value);
 
     if (fromId === toId) {
-        tg.showAlert('Нельзя перевести на тот же счет');
+        alert('Нельзя перевести на тот же счет');
         return;
     }
 
     if (isNaN(amount) || amount <= 0) {
-        tg.showAlert('Введите корректную сумму');
+        alert('Введите корректную сумму');
         return;
     }
 
     const fromAccount = appState.accounts.find(a => a.id === fromId);
     if (fromAccount.balance < amount) {
-        tg.showAlert('Недостаточно средств');
+        alert('Недостаточно средств');
         return;
     }
 
@@ -691,7 +636,7 @@ function transferMoney() {
     saveData();
     hideTransferForm();
 
-    tg.showAlert(`✅ Перевод выполнен: ${formatMoney(amount)}`);
+    alert(`✅ Перевод выполнен: ${formatMoney(amount)}`);
 }
 
 function showAccountForm() {
@@ -728,7 +673,7 @@ function saveAccount() {
     const balance = parseFloat(balanceInput.value) || 0;
 
     if (!name) {
-        tg.showAlert('Введите название счета');
+        alert('Введите название счета');
         return;
     }
 
@@ -761,31 +706,16 @@ function saveAccount() {
     saveData();
     hideAccountForm();
 
-    tg.showAlert(`✅ Счет "${name}" создан`);
+    alert(`✅ Счет "${name}" создан`);
 }
 
 function resetAllData() {
     if (confirm('Вы уверены? Все данные будут удалены!')) {
-        appState = {
-            accounts: [{
-                id: 'main',
-                name: '💰 Основной счет',
-                type: 'debit',
-                balance: 0,
-                currency: 'RUB',
-                icon: '💳',
-                color: '#40A7E3'
-            }],
-            transactions: [],
-            budget: 0,
-            activeAccount: 'main',
-            plans: [],
-            customCategories: { income: [], expense: [] }
-        };
+        appState = JSON.parse(JSON.stringify(defaultState));
         localStorage.removeItem('financeData');
         initializeAccounts();
         updateUI();
-        tg.showAlert('✅ Все данные сброшены');
+        alert('✅ Все данные сброшены');
     }
 }
 
@@ -873,8 +803,8 @@ function savePlan() {
     const recurring = recurringSelect.value;
     const accountId = accountSelect.value;
 
-    if (!name) { tg.showAlert('Введите название плана'); return; }
-    if (isNaN(amount) || amount <= 0) { tg.showAlert('Введите корректную сумму'); return; }
+    if (!name) { alert('Введите название плана'); return; }
+    if (isNaN(amount) || amount <= 0) { alert('Введите корректную сумму'); return; }
 
     const plan = {
         id: 'plan_' + Date.now(),
@@ -894,7 +824,7 @@ function savePlan() {
     saveData();
     hidePlanForm();
 
-    tg.showAlert(`✅ План "${name}" добавлен`);
+    alert(`✅ План "${name}" добавлен`);
 }
 
 function updatePlans() {
@@ -963,7 +893,7 @@ function togglePlanComplete(planId, completed) {
         const account = appState.accounts.find(a => a.id === plan.accountId);
         if (account) {
             if (account.balance < plan.amount) {
-                tg.showAlert(`⚠️ Недостаточно средств на счете "${account.name}"`);
+                alert(`⚠️ Недостаточно средств на счете "${account.name}"`);
                 const checkbox = document.querySelector(`input[onchange*="${planId}"]`);
                 if (checkbox) checkbox.checked = false;
                 return;
@@ -994,7 +924,7 @@ function togglePlanComplete(planId, completed) {
                 });
             }
 
-            tg.showAlert(`✅ Расход добавлен: ${formatMoney(plan.amount)}`);
+            alert(`✅ Расход добавлен: ${formatMoney(plan.amount)}`);
         }
     }
 
@@ -1038,7 +968,7 @@ function editAccount(accountId) {
 
 function deleteAccount(accountId) {
     if (appState.accounts.length <= 1) {
-        tg.showAlert('Нельзя удалить последний счет');
+        alert('Нельзя удалить последний счет');
         return;
     }
 
@@ -1081,7 +1011,7 @@ function setInitialBalanceFromModal() {
     const balance = parseFloat(input.value);
 
     if (isNaN(balance) || balance < 0) {
-        tg.showAlert('Введите корректную сумму');
+        alert('Введите корректную сумму');
         return;
     }
 
@@ -1109,7 +1039,7 @@ function setInitialBalanceFromModal() {
     saveData();
     hideInitialBalanceModal();
 
-    tg.showAlert(`✅ Начальный баланс установлен: ${formatMoney(balance)}`);
+    alert(`✅ Начальный баланс установлен: ${formatMoney(balance)}`);
 }
 
 function skipInitialBalance() {
@@ -1118,7 +1048,6 @@ function skipInitialBalance() {
 }
 
 // ===== ФУНКЦИИ ДЛЯ КАТЕГОРИЙ =====
-
 function showCategoryForm() {
     const app = document.getElementById('app');
     const form = document.getElementById('categoryForm');
@@ -1155,7 +1084,7 @@ function saveCategory() {
     const color = colorInput.value;
 
     if (!name) {
-        tg.showAlert('Введите название категории');
+        alert('Введите название категории');
         return;
     }
 
@@ -1173,13 +1102,12 @@ function saveCategory() {
 
     appState.customCategories[type].push(newCategory);
 
-    // Обновляем селектор категорий
     updateCategorySelector();
     updateCategoriesList();
     saveData();
     hideCategoryForm();
 
-    tg.showAlert(`✅ Категория "${name}" создана`);
+    alert(`✅ Категория "${name}" создана`);
 }
 
 function updateCategorySelector() {
@@ -1190,12 +1118,9 @@ function updateCategorySelector() {
     const expenseOptgroup = document.getElementById('expenseCategories');
 
     if (incomeOptgroup) {
-        // Оставляем основные категории доходов
         while (incomeOptgroup.children.length > 4) {
             incomeOptgroup.removeChild(incomeOptgroup.lastChild);
         }
-
-        // Добавляем пользовательские категории доходов
         if (appState.customCategories?.income) {
             appState.customCategories.income.forEach(cat => {
                 const option = document.createElement('option');
@@ -1207,12 +1132,9 @@ function updateCategorySelector() {
     }
 
     if (expenseOptgroup) {
-        // Оставляем основные категории расходов
         while (expenseOptgroup.children.length > 11) {
             expenseOptgroup.removeChild(expenseOptgroup.lastChild);
         }
-
-        // Добавляем пользовательские категории расходов
         if (appState.customCategories?.expense) {
             appState.customCategories.expense.forEach(cat => {
                 const option = document.createElement('option');
@@ -1230,7 +1152,6 @@ function updateAnalyticsCategorySelector() {
 
     selector.innerHTML = '<option value="">Все категории</option>';
 
-    // Стандартные категории расходов
     const standardCategories = {
         'food': '🍔 Еда',
         'housing': '🏠 Жилье',
@@ -1252,7 +1173,6 @@ function updateAnalyticsCategorySelector() {
         selector.appendChild(option);
     });
 
-    // Добавляем пользовательские категории расходов
     if (appState.customCategories?.expense) {
         appState.customCategories.expense.forEach(cat => {
             const option = document.createElement('option');
@@ -1277,7 +1197,6 @@ function selectCategoryForAnalysis() {
 
     selectedAnalysisCategory = categoryId;
 
-    // Получаем название категории
     let categoryName = '';
     let categoryIcon = '📊';
 
@@ -1448,39 +1367,7 @@ function deleteCategory(categoryId) {
     saveData();
 }
 
-function getCategoryName(category) {
-    // Сначала проверяем пользовательские категории
-    if (appState.customCategories) {
-        for (let type of ['income', 'expense']) {
-            const found = appState.customCategories[type]?.find(c => c.id === category);
-            if (found) return `${found.icon} ${found.name}`;
-        }
-    }
-
-    const categories = {
-        'salary': '💼 Зарплата',
-        'gifts': '🎁 Подарки',
-        'investments': '📈 Инвестиции',
-        'freelance': '💻 Фриланс',
-        'food': '🍔 Еда',
-        'housing': '🏠 Жилье',
-        'transport': '🚗 Транспорт',
-        'clothes': '👕 Одежда',
-        'health': '💊 Здоровье',
-        'entertainment': '🎮 Развлечения',
-        'education': '📚 Образование',
-        'pets': '🐶 Животные',
-        'communication': '📱 Связь',
-        'gifts_expense': '🎁 Подарки',
-        'work': '💼 Работа',
-        'initial': '💰 Начальный баланс',
-        'transfer': '🔄 Перевод'
-    };
-    return categories[category] || category;
-}
-
 // ===== ФУНКЦИИ ДЛЯ ПЕРИОДА =====
-
 function setPeriod(period) {
     currentPeriod = period;
 
@@ -1509,7 +1396,7 @@ function applyCustomPeriod() {
     const end = endInput.value;
 
     if (!start || !end) {
-        tg.showAlert('Выберите даты');
+        alert('Выберите даты');
         return;
     }
 
@@ -1531,7 +1418,6 @@ function getPeriodDates() {
             endDate = new Date(now);
             endDate.setHours(23, 59, 59);
             break;
-
         case 'week':
             startDate = new Date(now);
             startDate.setDate(now.getDate() - now.getDay() + 1);
@@ -1539,43 +1425,36 @@ function getPeriodDates() {
             endDate = new Date(now);
             endDate.setHours(23, 59, 59);
             break;
-
         case 'month':
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = new Date(now);
             endDate.setHours(23, 59, 59);
             break;
-
         case 'quarter':
             const quarter = Math.floor(now.getMonth() / 3);
             startDate = new Date(now.getFullYear(), quarter * 3, 1);
             endDate = new Date(now);
             endDate.setHours(23, 59, 59);
             break;
-
         case 'year':
             startDate = new Date(now.getFullYear(), 0, 1);
             endDate = new Date(now);
             endDate.setHours(23, 59, 59);
             break;
-
         case 'custom':
             startDate = customStartDate;
             endDate = customEndDate;
             break;
-
         default:
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = new Date(now);
             endDate.setHours(23, 59, 59);
     }
-
     return { startDate, endDate };
 }
 
 function updateStatsByPeriod() {
     const { startDate, endDate } = getPeriodDates();
-
     if (!startDate || !endDate) return;
 
     const filteredTransactions = appState.transactions.filter(t => {
@@ -1583,34 +1462,23 @@ function updateStatsByPeriod() {
         return tDate >= startDate && tDate <= endDate;
     });
 
-    let periodIncome = 0;
-    let periodExpense = 0;
-
+    let periodIncome = 0, periodExpense = 0;
     filteredTransactions.forEach(t => {
-        if (t.type === 'income') {
-            periodIncome += t.amount;
-        } else {
-            periodExpense += t.amount;
-        }
+        if (t.type === 'income') periodIncome += t.amount;
+        else periodExpense += t.amount;
     });
 
     const todayIncome = document.getElementById('todayIncome');
     const todayExpense = document.getElementById('todayExpense');
-
     if (todayIncome) todayIncome.textContent = formatMoney(periodIncome);
     if (todayExpense) todayExpense.textContent = formatMoney(periodExpense);
 
     updateTotalsWithFilter(filteredTransactions);
-
-    if (selectedAnalysisCategory) {
-        updateCategoryAnalysis();
-    }
+    if (selectedAnalysisCategory) updateCategoryAnalysis();
 }
 
 function updateTotalsWithFilter(transactions) {
-    let totalIncome = 0;
-    let totalExpense = 0;
-
+    let totalIncome = 0, totalExpense = 0;
     transactions.forEach(t => {
         if (t.type === 'income') totalIncome += t.amount;
         else totalExpense += t.amount;
@@ -1630,13 +1498,7 @@ function updateTotalsWithFilter(transactions) {
     }
 }
 
-function updateChartsWithFilter(transactions) {
-    // Заглушка для совместимости
-    console.log('updateChartsWithFilter вызван');
-}
-
 // ===== ФУНКЦИИ ДЛЯ ВКЛАДОК =====
-
 function switchTab(tab) {
     currentTab = tab;
 
@@ -1688,16 +1550,13 @@ function updatePlansChart() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom'
-                }
+                legend: { position: 'bottom' }
             }
         }
     });
 }
 
 // ===== ФУНКЦИИ ДЛЯ ЭМОДЗИ =====
-
 function updateEmojiList() {
     const emojiCategory = document.getElementById('emojiCategory')?.value || 'all';
     const grid = document.getElementById('emojiGrid');
@@ -1718,61 +1577,7 @@ function selectEmoji(emoji) {
     updateEmojiList();
 }
 
-// ===== ФУНКЦИИ ДЛЯ ОБНОВЛЕНИЙ =====
-
-async function checkForUpdates() {
-    if ('serviceWorker' in navigator) {
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (registration) {
-            registration.update();
-        }
-    }
-}
-
-// Инициализация
-document.addEventListener('DOMContentLoaded', () => {
-    loadData();
-
-    // Проверяем каждые 30 минут
-    setInterval(checkForUpdates, 30 * 60 * 1000);
-
-    // Проверяем когда приложение становится активным
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-            checkForUpdates();
-        }
-    });
-
-    // Принудительное обновление при ошибках
-    window.addEventListener('error', () => {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistration().then(reg => {
-                if (reg) reg.unregister().then(() => window.location.reload());
-            });
-        }
-    });
-});
-
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
-}
-// Показать меню быстрых действий
-function showQuickActions() {
-    document.getElementById('quickMenu').style.display = 'flex';
-}
-
-// Скрыть меню
-function hideQuickActions() {
-    document.getElementById('quickMenu').style.display = 'none';
-}
-
-// Закрывать по нажатию на ESC
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        hideQuickActions();
-    }
-});
-// Функции для красивой кнопки
+// ===== ФУНКЦИИ ДЛЯ КРАСИВОЙ КНОПКИ =====
 function showQuickActions() {
     document.getElementById('quickMenu').style.display = 'flex';
 }
@@ -1781,24 +1586,19 @@ function hideQuickActions() {
     document.getElementById('quickMenu').style.display = 'none';
 }
 
-// Закрытие по ESC
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') hideQuickActions();
 });
 
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').then(reg => {
-        reg.onupdatefound = () => {
-            const newWorker = reg.installing;
+// ===== ИНИЦИАЛИЗАЦИЯ =====
+document.addEventListener('DOMContentLoaded', () => {
+    initializeAccounts();
+    updateAnalyticsCategorySelector();
+    updateUI();
+    setTimeout(checkFirstLaunch, 500);
+});
 
-            newWorker.onstatechange = () => {
-                if (newWorker.state === 'installed') {
-                    if (navigator.serviceWorker.controller) {
-                        console.log('🔄 Новая версия доступна');
-                        window.location.reload();
-                    }
-                }
-            };
-        };
-    });
+// ===== SERVICE WORKER =====
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
 }
