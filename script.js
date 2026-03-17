@@ -499,6 +499,7 @@ function saveTransaction() {
         alert('Ошибка: форма не загружена');
         return;
     }
+}
 
     const amount = parseFloat(amountInput.value);
     const category = categorySelect.value;
