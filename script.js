@@ -1656,3 +1656,47 @@ if ('serviceWorker' in navigator) {
         }, 2000);
     }
 })();
+
+// ===== ХАК ДЛЯ iOS PWA =====
+(function() {
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                  window.navigator.standalone === true;
+
+    if (isPWA) {
+        console.log('📱 PWA режим: включаем слежку за Safari');
+
+        // Каждые 2 секунды проверяем данные в cookies
+        setInterval(() => {
+            const cookieData = document.cookie.replace(/(?:(?:^|.*;\s*)financeData\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+
+            if (cookieData) {
+                try {
+                    const parsed = JSON.parse(decodeURIComponent(cookieData));
+                    if (JSON.stringify(parsed) !== JSON.stringify(appState)) {
+                        console.log('🔄 Обновляем из cookies');
+                        appState = parsed;
+                        localStorage.setItem('financeData', cookieData);
+
+                        if (typeof initializeAccounts === 'function') initializeAccounts();
+                        if (typeof updateCategorySelector === 'function') updateCategorySelector();
+                        if (typeof updateAnalyticsCategorySelector === 'function') updateAnalyticsCategorySelector();
+                        if (typeof updateUI === 'function') updateUI();
+                    }
+                } catch (e) {}
+            }
+        }, 2000);
+
+        // Перехватываем saveData
+        const originalSaveData = window.saveData;
+        window.saveData = function() {
+            if (originalSaveData) originalSaveData();
+            // Дублируем в cookies
+            document.cookie = 'financeData=' + encodeURIComponent(localStorage.getItem('financeData')) + '; path=/; max-age=86400';
+        };
+    } else {
+        // В браузере — сохраняем в cookies при изменении
+        window.addEventListener('finance-data-changed', () => {
+            document.cookie = 'financeData=' + encodeURIComponent(localStorage.getItem('financeData')) + '; path=/; max-age=86400';
+        });
+    }
+})();
