@@ -550,7 +550,7 @@
             <div class="initial-balance-skip" onclick="skipInitialBalance()">Пропустить</div>
         </div>
     </div>
-    
+
 
     <!-- КРАСИВАЯ ГЛАВНАЯ КНОПКА -->
     <div class="floating-action">
@@ -740,5 +740,52 @@
         }, 2000);
     })();
 </script>
+<!-- Детальный просмотр категории -->
+<div id="categoryDetailModal" class="category-detail-modal" style="display: none;">
+    <div class="category-detail-content">
+        <div class="category-detail-header">
+            <div>
+                <span class="category-detail-icon" id="detailCategoryIcon">🍔</span>
+                <span class="category-detail-name" id="detailCategoryName">Продукты</span>
+            </div>
+            <button class="close-btn" onclick="hideCategoryDetail()">✖</button>
+        </div>
+
+        <div class="category-detail-total">
+            <div class="total-label">Всего потрачено</div>
+            <div class="total-amount" id="detailCategoryTotal">0 ₽</div>
+        </div>
+
+        <div class="category-detail-stats">
+            <div class="stat-chip">
+                <span class="stat-chip-label">Операций</span>
+                <span class="stat-chip-value" id="detailTransactionCount">0</span>
+            </div>
+            <div class="stat-chip">
+                <span class="stat-chip-label">Средний чек</span>
+                <span class="stat-chip-value" id="detailAverageAmount">0 ₽</span>
+            </div>
+            <div class="stat-chip">
+                <span class="stat-chip-label">Макс.</span>
+                <span class="stat-chip-value" id="detailMaxAmount">0 ₽</span>
+            </div>
+        </div>
+
+        <div class="category-detail-list">
+            <div class="list-header">
+                <span>Дата</span>
+                <span>Сумма</span>
+                <span>Счет</span>
+            </div>
+            <div id="detailTransactionsList" class="transactions-detail-list">
+                <!-- Транзакции будут подгружаться сюда -->
+            </div>
+        </div>
+
+        <div class="category-detail-footer">
+            <button class="btn btn-small" onclick="hideCategoryDetail()">Закрыть</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
