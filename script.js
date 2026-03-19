@@ -1754,3 +1754,532 @@ function hideCategoryDetail() {
     const modal = document.getElementById('categoryDetailModal');
     if (modal) modal.style.display = 'none';
 }
+// ===== IOS PWA ХАК =====
+(function() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                  window.navigator.standalone === true;
+
+    // Только для iOS PWA
+    if (isIOS && isPWA) {
+        console.log('🍎 iOS PWA режим: включаем принудительную синхронизацию');
+
+        // Ключ для хранения
+        const STORAGE_KEY = 'financeData';
+
+        // Функция загрузки данных
+        function loadFromBrowser() {
+            try {
+                // Пробуем получить данные через куки (единственный общий канал на iOS)
+                const cookieData = document.cookie.replace(/(?:(?:^|.*;\s*)financeData\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+
+                if (cookieData) {
+                    const parsed = JSON.parse(decodeURIComponent(cookieData));
+
+                    // Сравниваем с текущими данными
+                    if (JSON.stringify(parsed) !== JSON.stringify(appState)) {
+                        console.log('🔄 Обновляем данные из cookies');
+                        appState = parsed;
+                        localStorage.setItem(STORAGE_KEY, cookieData);
+
+                        if (typeof initializeAccounts === 'function') initializeAccounts();
+                        if (typeof updateCategorySelector === 'function') updateCategorySelector();
+                        if (typeof updateAnalyticsCategorySelector === 'function') updateAnalyticsCategorySelector();
+                        if (typeof updateUI === 'function') updateUI();
+                    }
+                }
+            } catch (e) {
+                console.log('❌ Ошибка загрузки из cookies:', e);
+            }
+        }
+
+        // Сохраняем данные в cookies при каждом изменении
+        const originalSaveData = window.saveData;
+        window.saveData = function() {
+            if (originalSaveData) originalSaveData();
+
+            // Дублируем в cookies (живут 7 дней)
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                document.cookie = 'financeData=' + encodeURIComponent(data) + '; path=/; max-age=604800';
+                console.log('🍪 Данные сохранены в cookies');
+            }
+        };
+
+        // При фокусе проверяем cookies
+        window.addEventListener('focus', loadFromBrowser);
+
+        // Проверяем каждые 3 секунды
+        setInterval(loadFromBrowser, 3000);
+
+        // Принудительная загрузка при старте
+        setTimeout(loadFromBrowser, 1000);
+
+        // Также сохраняем в localStorage Safari (для совместимости)
+        window.addEventListener('finance-data-changed', () => {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                document.cookie = 'financeData=' + encodeURIComponent(data) + '; path=/; max-age=604800';
+            }
+        });
+    } else if (isIOS) {
+        // В Safari — сохраняем в cookies при изменении
+        console.log('🍎 iOS Safari режим: сохраняем в cookies');
+
+        window.addEventListener('finance-data-changed', () => {
+            const data = localStorage.getItem('financeData');
+            if (data) {
+                document.cookie = 'financeData=' + encodeURIComponent(data) + '; path=/; max-age=604800';
+            }
+        });
+
+        // Сохраняем и при старте
+        const data = localStorage.getItem('financeData');
+        if (data) {
+            document.cookie = 'financeData=' + encodeURIComponent(data) + '; path=/; max-age=604800';
+        }
+    }
+})();
+// ===== ЗАГРУЗКА ВЫПИСОК ИЗ БАНКОВ =====
+function showBankInstructions(bank) {
+    const instructionsDiv = document.getElementById('bankInstructions');
+    let html = '<div style="font-weight: 600; margin-bottom: 10px;">📋 Как скачать выписку:</div>';
+
+    switch(bank) {
+        case 'sber':
+            html += `
+                <div class="instruction-step">
+                    <span class="step-number">1</span>
+                    <span>Войдите в Сбербанк Онлайн</span>
+                </div>
+                <div class="instruction-step">
+                    <span class="step-number">2</span>
+                    <span>Перейдите в "История операций"</span>
+                </div>
+                <div class="instruction-step">
+                    <span class="step-number">3</span>
+                    <span>Выберите период и нажмите "Выгрузить"</span>
+                </div>
+                <div class="instruction-step">
+                    <span class="step-number">4</span>
+                    <span>Выберите формат CSV</span>
+                </div>
+            `;
+            break;
+
+        case 'tinkoff':
+            html += `
+                <div class="instruction-step">
+                    <span class="step-number">1</span>
+                    <span>Откройте приложение Тинькофф</span>
+                </div>
+                <div class="instruction-step">
+                    <span class="step-number">2</span>
+                    <span>Выберите счет → "Выписка"</span>
+                </div>
+                <div class="instruction-step">
+                    <span class="step-number">3</span>
+                    <span>Нажмите "Экспорт в CSV"</span>
+                </div>
+            `;
+            break;
+
+        case 'alfa':
+            html += `
+                <div class="instruction-step">
+                    <span class="step-number">1</span>
+                    <span>Войдите в Альфа-Клик</span>
+                </div>
+                <div class="instruction-step">
+                    <span class="step-number">2</span>
+                    <span>История → "Выгрузить в Excel/CSV"</span>
+                </div>
+            `;
+            break;
+
+        case 'vtb':
+            html += `
+                <div class="instruction-step">
+                    <span class="step-number">1</span>
+                    <span>Войдите в ВТБ Онлайн</span>
+                </div>
+                <div class="instruction-step">
+                    <span class="step-number">2</span>
+                    <span>История операций → "Экспорт"</span>
+                </div>
+                <div class="instruction-step">
+                    <span class="step-number">3</span>
+                    <span>Выберите формат CSV</span>
+                </div>
+            `;
+            break;
+    }
+
+    html += `
+        <div style="margin-top: 15px; font-size: 12px; color: var(--hint-color);">
+            После скачивания нажмите "Загрузить выписку CSV"
+        </div>
+    `;
+
+    instructionsDiv.innerHTML = html;
+    instructionsDiv.style.display = 'block';
+}
+
+function handleCSVUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const csvText = e.target.result;
+
+        // Определяем банк по имени файла и содержимому
+        let bankName = getBankNameFromFile(file.name, csvText);
+
+        // Если не определили, спрашиваем пользователя
+        if (!bankName) {
+            bankName = prompt('Не удалось определить банк. Введите название банка:', 'Сбербанк');
+            if (!bankName) return;
+        }
+
+        // Создаем или получаем счет для этого банка
+        const accountId = createBankAccount(bankName);
+
+        // Делаем этот счет активным
+        setActiveAccount(accountId);
+
+        // Парсим CSV и импортируем операции
+        parseCSV(csvText, accountId, bankName);
+    };
+
+    reader.readAsText(file);
+}
+
+function parseCSV(csvText, accountId, bankName) {
+    // Показываем прогресс
+    document.getElementById('importProgress').style.display = 'block';
+    document.getElementById('importProgressBar').style.width = '0%';
+
+    // Разбиваем на строки
+    const lines = csvText.split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+
+    console.log('📊 Заголовки CSV:', headers);
+
+    // Определяем индексы колонок (для разных банков)
+    let dateIndex = -1;
+    let descIndex = -1;
+    let amountIndex = -1;
+
+    // Ищем по ключевым словам
+    headers.forEach((header, index) => {
+        if (header.includes('date') || header.includes('дата') || header.includes('дд.мм.гггг')) {
+            dateIndex = index;
+        }
+        if (header.includes('desc') || header.includes('описание') || header.includes('назначение') ||
+            header.includes('комментарий') || header.includes('comment')) {
+            descIndex = index;
+        }
+        if (header.includes('amount') || header.includes('сумма') || header.includes('debet') ||
+            header.includes('credit') || header.includes('дебет') || header.includes('кредит')) {
+            amountIndex = index;
+        }
+    });
+
+    // Если не нашли, пробуем по позициям (часто в банковских выписках)
+    if (dateIndex === -1 && headers.length > 0) dateIndex = 0;
+    if (descIndex === -1 && headers.length > 1) descIndex = 1;
+    if (amountIndex === -1 && headers.length > 2) amountIndex = 2;
+
+    let imported = 0;
+    let errors = 0;
+    let totalAmount = 0;
+
+    // Обрабатываем каждую строку
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+
+        try {
+            const values = parseCSVLine(lines[i]);
+
+            // Проверяем, что хватает колонок
+            if (values.length <= Math.max(dateIndex, descIndex, amountIndex)) continue;
+
+            // Парсим дату
+            let date = new Date();
+            if (dateIndex >= 0 && values[dateIndex]) {
+                const dateStr = values[dateIndex].replace(/"/g, '');
+
+                // Пробуем разные форматы дат
+                let parsedDate = null;
+
+                // DD.MM.YYYY
+                if (dateStr.includes('.')) {
+                    const parts = dateStr.split('.');
+                    if (parts.length === 3) {
+                        parsedDate = new Date(parts[2], parts[1]-1, parts[0]);
+                    }
+                }
+                // YYYY-MM-DD
+                else if (dateStr.includes('-')) {
+                    parsedDate = new Date(dateStr);
+                }
+
+                if (parsedDate && !isNaN(parsedDate)) {
+                    date = parsedDate;
+                }
+            }
+
+            // Парсим сумму
+            let amount = 0;
+            if (amountIndex >= 0 && values[amountIndex]) {
+                let amountStr = values[amountIndex].replace(/"/g, '').replace(/\s/g, '');
+
+                // Убираем пробелы и заменяем запятую на точку
+                amountStr = amountStr.replace(/\s/g, '').replace(',', '.');
+
+                // Убираем символы валют
+                amountStr = amountStr.replace(/[₽$€]/g, '');
+
+                // Определяем знак (дебет/кредит)
+                let sign = 1;
+                if (amountStr.includes('-')) {
+                    sign = -1;
+                    amountStr = amountStr.replace('-', '');
+                }
+
+                // Проверяем отдельные колонки для дебета и кредита
+                if (headers[amountIndex].includes('debet') || headers[amountIndex].includes('дебет')) {
+                    sign = -1; // Дебет = расход
+                } else if (headers[amountIndex].includes('credit') || headers[amountIndex].includes('кредит')) {
+                    sign = 1; // Кредит = доход
+                }
+
+                amount = parseFloat(amountStr) || 0;
+                amount *= sign;
+            }
+
+            if (amount === 0) continue;
+
+            // Описание
+            let description = '';
+            if (descIndex >= 0 && values[descIndex]) {
+                description = values[descIndex].replace(/"/g, '').trim();
+            }
+
+            if (!description) {
+                description = `Операция ${date.toLocaleDateString()}`;
+            }
+
+            // Создаем транзакцию
+            const transaction = {
+                id: Date.now() + imported,
+                accountId: accountId,
+                type: amount > 0 ? 'income' : 'expense',
+                amount: Math.abs(amount),
+                category: detectCategoryFromDescription(description),
+                description: description,
+                date: date.toISOString()
+            };
+
+            appState.transactions.push(transaction);
+
+            // Обновляем баланс счета
+            const account = appState.accounts.find(a => a.id === accountId);
+            if (account) {
+                account.balance += amount;
+                totalAmount += amount;
+            }
+
+            imported++;
+
+            // Обновляем прогресс
+            document.getElementById('importCount').textContent = imported;
+            const percent = (i / lines.length) * 100;
+            document.getElementById('importProgressBar').style.width = percent + '%';
+
+        } catch (e) {
+            errors++;
+            console.log('Ошибка парсинга строки:', e, lines[i]);
+        }
+    }
+
+    // Сохраняем и обновляем
+    saveData();
+    updateUI();
+
+    // Показываем результат
+    setTimeout(() => {
+        document.getElementById('importProgress').style.display = 'none';
+
+        const totalFormatted = formatMoney(Math.abs(totalAmount));
+        const sign = totalAmount >= 0 ? 'пополнение' : 'списание';
+
+        alert(`✅ Импорт из ${bankName} завершен!\n\n` +
+              `📊 Добавлено: ${imported} операций\n` +
+              `💰 Баланс: ${sign === 'пополнение' ? '+' : '-'}${totalFormatted}\n` +
+              `📁 Счет: ${bankName}`);
+    }, 500);
+}
+
+function parseCSVLine(line) {
+    // Простой парсер CSV (учитывает кавычки)
+    const result = [];
+    let inQuotes = false;
+    let current = '';
+
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current);
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+
+    result.push(current);
+    return result;
+}
+
+function getBankNameFromFile(fileName, csvText) {
+    const name = fileName.toLowerCase();
+    const text = csvText.toLowerCase();
+
+    // Определяем банк по имени файла или содержимому
+    if (name.includes('sber') || name.includes('сбер') || text.includes('сбербанк') || text.includes('sberbank')) {
+        return 'Сбербанк';
+    }
+    if (name.includes('tinkoff') || name.includes('тинькофф') || text.includes('tinkoff') || text.includes('тинькофф')) {
+        return 'Tinkoff';
+    }
+    if (name.includes('alfa') || name.includes('альфа') || text.includes('alfa') || text.includes('альфа')) {
+        return 'Альфа-Банк';
+    }
+    if (name.includes('vtb') || name.includes('втб') || text.includes('vtb') || text.includes('втб')) {
+        return 'ВТБ';
+    }
+    if (name.includes('raiffeisen') || name.includes('райффайзен') || text.includes('raiffeisen')) {
+        return 'Райффайзен';
+    }
+    if (name.includes('gazprom') || name.includes('газпром') || text.includes('gazprombank')) {
+        return 'Газпромбанк';
+    }
+    if (name.includes('otkritie') || name.includes('открытие') || text.includes('otkritie')) {
+        return 'Банк Открытие';
+    }
+    if (name.includes('pochta') || name.includes('почта') || text.includes('pochta')) {
+        return 'Почта Банк';
+    }
+
+    return null;
+}
+
+function createBankAccount(bankName) {
+    // Иконки для разных банков
+    const bankIcons = {
+        'Сбербанк': '🏦',
+        'Tinkoff': '💳',
+        'Альфа-Банк': '🏛️',
+        'ВТБ': '🏢',
+        'Райффайзен': '🇦🇹',
+        'Газпромбанк': '⛽',
+        'Банк Открытие': '🔓',
+        'Почта Банк': '📮'
+    };
+
+    // Цвета для разных банков
+    const bankColors = {
+        'Сбербанк': '#3CB371',  // зеленый
+        'Tinkoff': '#FFDD00',    // желтый
+        'Альфа-Банк': '#E31B23', // красный
+        'ВТБ': '#003C7F',        // синий
+        'Райффайзен': '#FDB913', // желтый
+        'Газпромбанк': '#1B4F9E', // синий
+        'Банк Открытие': '#00AEEF', // голубой
+        'Почта Банк': '#660099'   // фиолетовый
+    };
+
+    // Проверяем, есть ли уже такой счет
+    let existingAccount = appState.accounts.find(a => a.name.includes(bankName));
+
+    if (existingAccount) {
+        return existingAccount.id;
+    }
+
+    // Создаем новый счет для банка
+    const newAccount = {
+        id: 'bank_' + bankName.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now(),
+        name: `${bankIcons[bankName] || '🏦'} ${bankName}`,
+        type: 'debit',
+        balance: 0,
+        currency: 'RUB',
+        icon: bankIcons[bankName] || '🏦',
+        color: bankColors[bankName] || '#808080',
+        isBank: true
+    };
+
+    appState.accounts.push(newAccount);
+
+    // Обновляем интерфейс
+    updateAccountSelector();
+    updateAccountsSummary();
+    saveData();
+
+    console.log(`✅ Создан счет для банка: ${newAccount.name}`);
+    return newAccount.id;
+}
+
+function detectCategoryFromDescription(text) {
+    text = text.toLowerCase();
+
+    // Категории расходов
+    if (text.includes('пятерочка') || text.includes('магнит') || text.includes('перекресток') ||
+        text.includes('продукт') || text.includes('еда') || text.includes('food')) {
+        return 'food';
+    }
+
+    if (text.includes('аптека') || text.includes('здоровье') || text.includes('лекар')) {
+        return 'health';
+    }
+
+    if (text.includes('такси') || text.includes('uber') || text.includes('яндекс') ||
+        text.includes('metro') || text.includes('транспорт')) {
+        return 'transport';
+    }
+
+    if (text.includes('одежда') || text.includes('zara') || text.includes('h&m')) {
+        return 'clothes';
+    }
+
+    if (text.includes('ресторан') || text.includes('кафе') || text.includes('кофе')) {
+        return 'food';
+    }
+
+    if (text.includes('кино') || text.includes('театр') || text.includes('клуб')) {
+        return 'entertainment';
+    }
+
+    if (text.includes('мтс') || text.includes('билайн') || text.includes('мегафон')) {
+        return 'communication';
+    }
+
+    if (text.includes('авито') || text.includes('avito')) {
+        return 'other_expense';
+    }
+
+    // Категории доходов
+    if (text.includes('зарплата') || text.includes('аванс')) {
+        return 'salary';
+    }
+
+    if (text.includes('перевод')) {
+        return 'transfer';
+    }
+
+    return 'other_expense';
+}
