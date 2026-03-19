@@ -1894,33 +1894,61 @@ function hideCategoryDetail() {
 
 // ===== ЦЕЛИ =====
 function showGoalForm() {
+    console.log('🎯 Открытие формы цели');
+
     const form = document.getElementById('goalForm');
     const accountSelect = document.getElementById('goalAccount');
 
+    if (!form) {
+        console.error('❌ Форма goalForm не найдена!');
+        return;
+    }
+
+    if (!accountSelect) {
+        console.error('❌ Элемент goalAccount не найдена!');
+        return;
+    }
+
     // Заполняем список счетов
     accountSelect.innerHTML = appState.accounts.map(a =>
-        `<option value="${a.id}">${a.icon} ${a.name}</option>`
+        `<option value="${a.id}">${a.icon} ${a.name} (${formatMoney(a.balance)})</option>`
     ).join('');
 
-    // Устанавливаем сегодняшнюю дату + 30 дней как дедлайн по умолчанию
-    const defaultDeadline = new Date();
-    defaultDeadline.setDate(defaultDeadline.getDate() + 30);
-    document.getElementById('goalDeadline').value = defaultDeadline.toISOString().split('T')[0];
-
+    // Скрываем главное приложение и показываем форму
     document.getElementById('app').style.display = 'none';
     form.style.display = 'block';
+
+    console.log('✅ Форма цели открыта');
 }
 
 function hideGoalForm() {
-    document.getElementById('goalForm').style.display = 'none';
+    console.log('🎯 Закрытие формы цели');
+
+    const form = document.getElementById('goalForm');
+    if (form) {
+        form.style.display = 'none';
+    }
+
     document.getElementById('app').style.display = 'block';
 }
 
 function saveGoal() {
-    const name = document.getElementById('goalName').value;
-    const target = parseFloat(document.getElementById('goalTarget').value);
-    const accountId = document.getElementById('goalAccount').value;
-    const color = document.getElementById('goalColor').value;
+    console.log('🎯 Сохранение цели');
+
+    const nameInput = document.getElementById('goalName');
+    const targetInput = document.getElementById('goalTarget');
+    const accountSelect = document.getElementById('goalAccount');
+    const colorInput = document.getElementById('goalColor');
+
+    if (!nameInput || !targetInput || !accountSelect || !colorInput) {
+        alert('Ошибка: не все поля найдены');
+        return;
+    }
+
+    const name = nameInput.value.trim();
+    const target = parseFloat(targetInput.value);
+    const accountId = accountSelect.value;
+    const color = colorInput.value;
 
     if (!name) {
         alert('Введите название цели');
@@ -1944,7 +1972,6 @@ function saveGoal() {
         color: color,
         createdAt: new Date().toISOString(),
         achieved: currentBalance >= target
-        // deadline удален
     };
 
     if (!appState.goals) appState.goals = [];
@@ -1953,27 +1980,33 @@ function saveGoal() {
     saveData();
     updateGoals();
     hideGoalForm();
+
+    alert(`✅ Цель "${name}" создана!`);
 }
 
 function updateGoals() {
+    console.log('🎯 Обновление списка целей');
+
     const goalsList = document.getElementById('goalsList');
     const noGoalsMsg = document.getElementById('noGoalsMessage');
 
-    if (!goalsList) return;
-
-    if (!appState.goals || appState.goals.length === 0) {
-        goalsList.innerHTML = '';
-        noGoalsMsg.style.display = 'block';
+    if (!goalsList) {
+        console.error('❌ Элемент goalsList не найден');
         return;
     }
 
-    noGoalsMsg.style.display = 'none';
+    if (!appState.goals || appState.goals.length === 0) {
+        goalsList.innerHTML = '';
+        if (noGoalsMsg) noGoalsMsg.style.display = 'block';
+        return;
+    }
+
+    if (noGoalsMsg) noGoalsMsg.style.display = 'none';
 
     goalsList.innerHTML = appState.goals.map(goal => {
         const percent = (goal.current / goal.target) * 100;
         const account = appState.accounts.find(a => a.id === goal.accountId);
 
-        // Выбираем эмодзи в зависимости от прогресса
         let emoji = '🎯';
         if (goal.achieved) emoji = '🏆';
         else if (percent >= 75) emoji = '🚀';
@@ -2007,8 +2040,6 @@ function updateGoals() {
                     <span>${account ? account.name : 'Счет не найден'}</span>
                     <span>${percent.toFixed(1)}%</span>
                 </div>
-
-                <!-- БЛОК С ДЕДЛАЙНОМ УДАЛЕН -->
 
                 ${goal.achieved ? `
                     <div class="goal-achieved">
