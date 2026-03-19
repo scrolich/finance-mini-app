@@ -1667,6 +1667,20 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAnalyticsCategorySelector();
     updateUI();
     setTimeout(checkFirstLaunch, 500);
+
+    // Восстанавливаем уведомления
+    const notificationsEnabled = localStorage.getItem('notifications') === 'enabled';
+    const toggle = document.getElementById('notificationsToggle');
+    if (toggle) {
+        toggle.checked = notificationsEnabled;
+        if (notificationsEnabled) {
+            setupNotifications().then(() => {
+                startNotifications();
+                // Проверяем планы сразу при загрузке
+                setTimeout(checkPlansNotification, 2000);
+            });
+        }
+    }
 });
 
 // ===== SERVICE WORKER =====
@@ -2046,3 +2060,153 @@ function updateUI() {
     updateAccountsSummary();
 }
 
+
+// ===== УВЕДОМЛЕНИЯ =====
+async function setupNotifications() {
+    if (!('Notification' in window)) {
+        console.log('❌ Браузер не поддерживает уведомления');
+        return false;
+    }
+
+    if (Notification.permission === 'granted') {
+        return true;
+    }
+
+    if (Notification.permission === 'denied') {
+        return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+}
+
+function showNotification(title, options = {}) {
+    if (Notification.permission === 'granted') {
+        const notification = new Notification(title, {
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            vibrate: [200, 100, 200],
+            ...options
+        });
+
+        notification.onclick = function() {
+            window.focus();
+            this.close();
+        };
+    }
+}
+
+// ===== УВЕДОМЛЕНИЕ О ПЛАНАХ =====
+function checkPlansNotification() {
+    if (Notification.permission !== 'granted') return;
+
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const plans = appState.plans?.filter(p => !p.completed) || [];
+    let notified = false;
+
+    plans.forEach(plan => {
+        const planDate = new Date(plan.date);
+
+        // Завтрашние платежи
+        if (planDate.toDateString() === tomorrow.toDateString()) {
+            showNotification('📅 Завтра платёж', {
+                body: `${plan.name} — ${formatMoney(plan.amount)}`,
+                tag: 'plan'
+            });
+            notified = true;
+        }
+
+        // Платежи на сегодня (если еще не выполнены)
+        if (planDate.toDateString() === today.toDateString() && !plan.completed) {
+            showNotification('⚠️ План на сегодня', {
+                body: `${plan.name} — ${formatMoney(plan.amount)}`,
+                tag: 'plan'
+            });
+            notified = true;
+        }
+    });
+
+    return notified;
+}
+
+// ===== ЕЖЕНЕДЕЛЬНАЯ СТАТИСТИКА =====
+function sendWeeklyStats() {
+    if (Notification.permission !== 'granted') return;
+
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+
+    // Транзакции за последние 7 дней
+    const weekTransactions = appState.transactions.filter(t =>
+        new Date(t.date) >= lastWeek
+    );
+
+    if (weekTransactions.length === 0) return;
+
+    const income = weekTransactions.filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+    const expense = weekTransactions.filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    // Топ категория расходов
+    const categories = {};
+    weekTransactions.filter(t => t.type === 'expense').forEach(t => {
+        const catName = getCategoryName(t.category);
+        categories[catName] = (categories[catName] || 0) + t.amount;
+    });
+
+    const topCategory = Object.entries(categories).sort((a, b) => b[1] - a[1])[0];
+    const topText = topCategory ? `${topCategory[0]}: ${formatMoney(topCategory[1])}` : '';
+
+    showNotification('📊 Статистика за неделю', {
+        body: `💰 Доходы: ${formatMoney(income)}\n💸 Расходы: ${formatMoney(expense)}\n📈 Разница: ${formatMoney(income - expense)}\n${topText ? `🥇 ${topText}` : ''}`,
+        tag: 'weekly'
+    });
+}
+
+// ===== ЗАПУСК УВЕДОМЛЕНИЙ =====
+function startNotifications() {
+    if (Notification.permission !== 'granted') return;
+
+    // Проверка планов каждый час
+    setInterval(checkPlansNotification, 60 * 60 * 1000);
+
+    // Еженедельная статистика
+    setInterval(() => {
+        const lastWeekly = localStorage.getItem('lastWeeklyNotification');
+        const now = Date.now();
+
+        if (!lastWeekly || now - parseInt(lastWeekly) > 7 * 24 * 60 * 60 * 1000) {
+            sendWeeklyStats();
+            localStorage.setItem('lastWeeklyNotification', now.toString());
+        }
+    }, 24 * 60 * 60 * 1000); // проверяем раз в день
+}
+
+async function toggleNotifications() {
+    const toggle = document.getElementById('notificationsToggle');
+    const status = document.getElementById('notificationStatus');
+
+    if (toggle.checked) {
+        const granted = await setupNotifications();
+        if (granted) {
+            localStorage.setItem('notifications', 'enabled');
+            status.innerHTML = '✅ Уведомления включены';
+            startNotifications();
+
+            // Тестовое
+            showNotification('✅ Уведомления включены', {
+                body: 'Вы будете получать напоминания о планах и еженедельную статистику'
+            });
+        } else {
+            toggle.checked = false;
+            status.innerHTML = '❌ Не удалось включить уведомления';
+        }
+    } else {
+        localStorage.setItem('notifications', 'disabled');
+        status.innerHTML = '🔕 Уведомления отключены';
+    }
+}
