@@ -28,7 +28,7 @@ const defaultState = {
         }
     ],
     transactions: [],
-    budget: 0,
+    goals: [],
     activeAccount: 'main',
     plans: [],
     customCategories: {
@@ -914,47 +914,84 @@ function togglePlanComplete(planId, completed) {
     const plan = appState.plans.find(p => p.id === planId);
     if (!plan) return;
 
+    const account = appState.accounts.find(a => a.id === plan.accountId);
+    if (!account) return;
+
     if (completed && !plan.completed) {
-        const account = appState.accounts.find(a => a.id === plan.accountId);
-        if (account) {
-            if (account.balance < plan.amount) {
-                console.log(`⚠️ Недостаточно средств на счете "${account.name}"`);
-                const checkbox = document.querySelector(`input[onchange*="${planId}"]`);
-                if (checkbox) checkbox.checked = false;
-                return;
-            }
-
-            appState.transactions.push({
-                id: Date.now(),
-                accountId: plan.accountId,
-                type: 'expense',
-                amount: plan.amount,
-                category: plan.category,
-                description: `📋 План: ${plan.name}`,
-                date: new Date().toISOString()
-            });
-
-            account.balance -= plan.amount;
-
-            if (plan.recurring) {
-                const nextDate = new Date(plan.date);
-                if (plan.recurring === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
-                else if (plan.recurring === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
-                appState.plans.push({
-                    ...plan,
-                    id: 'plan_' + Date.now() + '_recurring',
-                    date: nextDate.toISOString().split('T')[0],
-                    completed: false,
-                    createdAt: new Date().toISOString()
-                });
-            }
+        // Отмечаем как выполненное - списываем деньги
+        if (account.balance < plan.amount) {
+            alert(`⚠️ Недостаточно средств на счете "${account.name}"`);
+            // Возвращаем чекбокс в исходное состояние
+            const checkbox = document.querySelector(`input[onchange*="${planId}"]`);
+            if (checkbox) checkbox.checked = false;
+            return;
         }
+
+        // Создаем транзакцию расхода
+        const transaction = {
+            id: Date.now(),
+            accountId: plan.accountId,
+            type: 'expense',
+            amount: plan.amount,
+            category: plan.category,
+            description: `📋 План: ${plan.name}`,
+            date: new Date().toISOString()
+        };
+
+        appState.transactions.push(transaction);
+        account.balance -= plan.amount;
+        plan.completed = true;
+
+        // Если план повторяющийся, создаем новый
+        if (plan.recurring) {
+            const nextDate = new Date(plan.date);
+            if (plan.recurring === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+            else if (plan.recurring === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+
+            appState.plans.push({
+                ...plan,
+                id: 'plan_' + Date.now() + '_recurring',
+                date: nextDate.toISOString().split('T')[0],
+                completed: false,
+                createdAt: new Date().toISOString()
+            });
+        }
+
+        alert(`✅ Расход добавлен: ${formatMoney(plan.amount)}`);
+
+    } else if (!completed && plan.completed) {
+        // Снимаем отметку - возвращаем деньги
+        if (confirm('Вернуть这笔操作? Деньги будут возвращены на счет.')) {
+
+            // Ищем и удаляем транзакцию, связанную с этим планом
+            const transactionIndex = appState.transactions.findIndex(t =>
+                t.description === `📋 План: ${plan.name}` &&
+                t.amount === plan.amount &&
+                new Date(t.date).toDateString() === new Date().toDateString()
+            );
+
+            if (transactionIndex !== -1) {
+                // Удаляем транзакцию
+                appState.transactions.splice(transactionIndex, 1);
+                // Возвращаем деньги
+                account.balance += plan.amount;
+            }
+
+            plan.completed = false;
+            alert(`↩️ Деньги возвращены: ${formatMoney(plan.amount)}`);
+        } else {
+            // Если пользователь передумал, возвращаем чекбокс в отмеченное состояние
+            const checkbox = document.querySelector(`input[onchange*="${planId}"]`);
+            if (checkbox) checkbox.checked = true;
+            return;
+        }
+    } else {
+        plan.completed = completed;
     }
 
-    plan.completed = completed;
     updatePlans();
     updateAccountsSummary();
-    updateUI();
+    updateGoals(); // Обновляем цели, так как баланс мог измениться
     saveData();
 }
 
@@ -1840,668 +1877,189 @@ function hideCategoryDetail() {
         }
     }
 })();
-// ===== ЗАГРУЗКА ВЫПИСОК ИЗ БАНКОВ =====
-function showBankInstructions(bank) {
-    const instructionsDiv = document.getElementById('bankInstructions');
-    let html = '<div style="font-weight: 600; margin-bottom: 10px;">📋 Как скачать выписку:</div>';
 
-    switch(bank) {
-        case 'sber':
-            html += `
-                <div class="instruction-step">
-                    <span class="step-number">1</span>
-                    <span>Войдите в Сбербанк Онлайн</span>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-number">2</span>
-                    <span>Перейдите в "История операций"</span>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-number">3</span>
-                    <span>Выберите период и нажмите "Выгрузить"</span>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-number">4</span>
-                    <span>Выберите формат CSV</span>
-                </div>
-            `;
-            break;
+// ===== ЦЕЛИ =====
+function showGoalForm() {
+    const form = document.getElementById('goalForm');
+    const accountSelect = document.getElementById('goalAccount');
 
-        case 'tinkoff':
-            html += `
-                <div class="instruction-step">
-                    <span class="step-number">1</span>
-                    <span>Откройте приложение Тинькофф</span>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-number">2</span>
-                    <span>Выберите счет → "Выписка"</span>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-number">3</span>
-                    <span>Нажмите "Экспорт в CSV"</span>
-                </div>
-            `;
-            break;
+    // Заполняем список счетов
+    accountSelect.innerHTML = appState.accounts.map(a =>
+        `<option value="${a.id}">${a.icon} ${a.name}</option>`
+    ).join('');
 
-        case 'alfa':
-            html += `
-                <div class="instruction-step">
-                    <span class="step-number">1</span>
-                    <span>Войдите в Альфа-Клик</span>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-number">2</span>
-                    <span>История → "Выгрузить в Excel/CSV"</span>
-                </div>
-            `;
-            break;
+    // Устанавливаем сегодняшнюю дату + 30 дней как дедлайн по умолчанию
+    const defaultDeadline = new Date();
+    defaultDeadline.setDate(defaultDeadline.getDate() + 30);
+    document.getElementById('goalDeadline').value = defaultDeadline.toISOString().split('T')[0];
 
-        case 'vtb':
-            html += `
-                <div class="instruction-step">
-                    <span class="step-number">1</span>
-                    <span>Войдите в ВТБ Онлайн</span>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-number">2</span>
-                    <span>История операций → "Экспорт"</span>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-number">3</span>
-                    <span>Выберите формат CSV</span>
-                </div>
-            `;
-            break;
-    }
-
-    html += `
-        <div style="margin-top: 15px; font-size: 12px; color: var(--hint-color);">
-            После скачивания нажмите "Загрузить выписку CSV"
-        </div>
-    `;
-
-    instructionsDiv.innerHTML = html;
-    instructionsDiv.style.display = 'block';
+    document.getElementById('app').style.display = 'none';
+    form.style.display = 'block';
 }
 
-function handleCSVUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-        const csvText = e.target.result;
-
-        // Определяем банк по имени файла и содержимому
-        let bankName = getBankNameFromFile(file.name, csvText);
-
-        // Если не определили, спрашиваем пользователя
-        if (!bankName) {
-            bankName = prompt('Не удалось определить банк. Введите название банка:', 'Сбербанк');
-            if (!bankName) return;
-        }
-
-        // Создаем или получаем счет для этого банка
-        const accountId = createBankAccount(bankName);
-
-        // Делаем этот счет активным
-        setActiveAccount(accountId);
-
-        // Парсим CSV и импортируем операции
-        parseCSV(csvText, accountId, bankName);
-    };
-
-    reader.readAsText(file);
+function hideGoalForm() {
+    document.getElementById('goalForm').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
 }
 
-function parseCSV(csvText, accountId, bankName) {
-    // Показываем прогресс
-    document.getElementById('importProgress').style.display = 'block';
-    document.getElementById('importProgressBar').style.width = '0%';
+function saveGoal() {
+    const name = document.getElementById('goalName').value;
+    const target = parseFloat(document.getElementById('goalTarget').value);
+    const accountId = document.getElementById('goalAccount').value;
+    const deadline = document.getElementById('goalDeadline').value;
+    const color = document.getElementById('goalColor').value;
 
-    // Разбиваем на строки
-    const lines = csvText.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-
-    console.log('📊 Заголовки CSV:', headers);
-
-    // Определяем индексы колонок (для разных банков)
-    let dateIndex = -1;
-    let descIndex = -1;
-    let amountIndex = -1;
-
-    // Ищем по ключевым словам
-    headers.forEach((header, index) => {
-        if (header.includes('date') || header.includes('дата') || header.includes('дд.мм.гггг')) {
-            dateIndex = index;
-        }
-        if (header.includes('desc') || header.includes('описание') || header.includes('назначение') ||
-            header.includes('комментарий') || header.includes('comment')) {
-            descIndex = index;
-        }
-        if (header.includes('amount') || header.includes('сумма') || header.includes('debet') ||
-            header.includes('credit') || header.includes('дебет') || header.includes('кредит')) {
-            amountIndex = index;
-        }
-    });
-
-    // Если не нашли, пробуем по позициям (часто в банковских выписках)
-    if (dateIndex === -1 && headers.length > 0) dateIndex = 0;
-    if (descIndex === -1 && headers.length > 1) descIndex = 1;
-    if (amountIndex === -1 && headers.length > 2) amountIndex = 2;
-
-    let imported = 0;
-    let errors = 0;
-    let totalAmount = 0;
-
-    // Обрабатываем каждую строку
-    for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-
-        try {
-            const values = parseCSVLine(lines[i]);
-
-            // Проверяем, что хватает колонок
-            if (values.length <= Math.max(dateIndex, descIndex, amountIndex)) continue;
-
-            // Парсим дату
-            let date = new Date();
-            if (dateIndex >= 0 && values[dateIndex]) {
-                const dateStr = values[dateIndex].replace(/"/g, '');
-
-                // Пробуем разные форматы дат
-                let parsedDate = null;
-
-                // DD.MM.YYYY
-                if (dateStr.includes('.')) {
-                    const parts = dateStr.split('.');
-                    if (parts.length === 3) {
-                        parsedDate = new Date(parts[2], parts[1]-1, parts[0]);
-                    }
-                }
-                // YYYY-MM-DD
-                else if (dateStr.includes('-')) {
-                    parsedDate = new Date(dateStr);
-                }
-
-                if (parsedDate && !isNaN(parsedDate)) {
-                    date = parsedDate;
-                }
-            }
-
-            // Парсим сумму
-            let amount = 0;
-            if (amountIndex >= 0 && values[amountIndex]) {
-                let amountStr = values[amountIndex].replace(/"/g, '').replace(/\s/g, '');
-
-                // Убираем пробелы и заменяем запятую на точку
-                amountStr = amountStr.replace(/\s/g, '').replace(',', '.');
-
-                // Убираем символы валют
-                amountStr = amountStr.replace(/[₽$€]/g, '');
-
-                // Определяем знак (дебет/кредит)
-                let sign = 1;
-                if (amountStr.includes('-')) {
-                    sign = -1;
-                    amountStr = amountStr.replace('-', '');
-                }
-
-                // Проверяем отдельные колонки для дебета и кредита
-                if (headers[amountIndex].includes('debet') || headers[amountIndex].includes('дебет')) {
-                    sign = -1; // Дебет = расход
-                } else if (headers[amountIndex].includes('credit') || headers[amountIndex].includes('кредит')) {
-                    sign = 1; // Кредит = доход
-                }
-
-                amount = parseFloat(amountStr) || 0;
-                amount *= sign;
-            }
-
-            if (amount === 0) continue;
-
-            // Описание
-            let description = '';
-            if (descIndex >= 0 && values[descIndex]) {
-                description = values[descIndex].replace(/"/g, '').trim();
-            }
-
-            if (!description) {
-                description = `Операция ${date.toLocaleDateString()}`;
-            }
-
-            // Создаем транзакцию
-            const transaction = {
-                id: Date.now() + imported,
-                accountId: accountId,
-                type: amount > 0 ? 'income' : 'expense',
-                amount: Math.abs(amount),
-                category: detectCategoryFromDescription(description),
-                description: description,
-                date: date.toISOString()
-            };
-
-            appState.transactions.push(transaction);
-
-            // Обновляем баланс счета
-            const account = appState.accounts.find(a => a.id === accountId);
-            if (account) {
-                account.balance += amount;
-                totalAmount += amount;
-            }
-
-            imported++;
-
-            // Обновляем прогресс
-            document.getElementById('importCount').textContent = imported;
-            const percent = (i / lines.length) * 100;
-            document.getElementById('importProgressBar').style.width = percent + '%';
-
-        } catch (e) {
-            errors++;
-            console.log('Ошибка парсинга строки:', e, lines[i]);
-        }
-    }
-
-    // Сохраняем и обновляем
-    saveData();
-    updateUI();
-
-    // Показываем результат
-    setTimeout(() => {
-        document.getElementById('importProgress').style.display = 'none';
-
-        const totalFormatted = formatMoney(Math.abs(totalAmount));
-        const sign = totalAmount >= 0 ? 'пополнение' : 'списание';
-
-        alert(`✅ Импорт из ${bankName} завершен!\n\n` +
-              `📊 Добавлено: ${imported} операций\n` +
-              `💰 Баланс: ${sign === 'пополнение' ? '+' : '-'}${totalFormatted}\n` +
-              `📁 Счет: ${bankName}`);
-    }, 500);
-}
-
-// ===== ИМПОРТ ИЗ PDF =====
-async function handlePDFUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // Показываем прогресс
-    document.getElementById('importProgress').style.display = 'block';
-    document.getElementById('importProgressBar').style.width = '0%';
-    document.getElementById('importCount').textContent = 'Чтение PDF...';
-
-    try {
-        // Читаем PDF файл
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-        let fullText = '';
-
-        // Проходим по всем страницам
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
-            fullText += pageText + '\n';
-
-            // Обновляем прогресс
-            const percent = (i / pdf.numPages) * 100;
-            document.getElementById('importProgressBar').style.width = percent + '%';
-            document.getElementById('importCount').textContent = `Страница ${i} из ${pdf.numPages}`;
-        }
-
-        // Определяем банк по тексту
-        const bankName = detectBankFromPDF(fullText);
-
-        // Создаем счет для банка
-        const accountId = createBankAccount(bankName);
-        setActiveAccount(accountId);
-
-        // Парсим транзакции из текста
-        const transactions = parsePDFText(fullText, bankName);
-
-        // Импортируем транзакции
-        await importPDFTransactions(transactions, accountId);
-
-    } catch (error) {
-        console.error('Ошибка при чтении PDF:', error);
-        alert('❌ Не удалось прочитать PDF файл. Убедитесь, что это выписка из банка.');
-    }
-}
-
-function detectBankFromPDF(text) {
-    text = text.toLowerCase();
-
-    if (text.includes('сбербанк') || text.includes('sberbank')) {
-        return 'Сбербанк';
-    }
-    if (text.includes('тинькофф') || text.includes('tinkoff')) {
-        return 'Tinkoff';
-    }
-    if (text.includes('альфа') || text.includes('alfa')) {
-        return 'Альфа-Банк';
-    }
-    if (text.includes('втб') || text.includes('vtb')) {
-        return 'ВТБ';
-    }
-    if (text.includes('райффайзен') || text.includes('raiffeisen')) {
-        return 'Райффайзен';
-    }
-
-    return 'Банк (неизвестный)';
-}
-
-function parsePDFText(text, bankName) {
-    const lines = text.split('\n');
-    const transactions = [];
-
-    // Регулярные выражения для поиска транзакций
-    const dateRegex = /\d{2}[\.\/]\d{2}[\.\/]\d{2,4}/g; // 01.01.2024
-    const amountRegex = /[\+\-]?\s*[\d\s]+[.,]\d{2}\s*[₽$€]?/g;
-
-    let currentDate = null;
-
-    for (let line of lines) {
-        line = line.trim();
-        if (!line) continue;
-
-        // Ищем дату
-        const dateMatch = line.match(dateRegex);
-        if (dateMatch) {
-            currentDate = dateMatch[0];
-        }
-
-        // Ищем сумму
-        const amountMatch = line.match(amountRegex);
-        if (amountMatch && currentDate) {
-            let amountStr = amountMatch[0].replace(/\s/g, '').replace(',', '.').replace(/[₽$€]/g, '');
-            let amount = parseFloat(amountStr) || 0;
-
-            // Определяем знак (дебет/кредит)
-            if (line.includes('дебет') || line.includes('списание') || amount < 0) {
-                amount = -Math.abs(amount);
-            } else if (line.includes('кредит') || line.includes('поступление')) {
-                amount = Math.abs(amount);
-            }
-
-            if (amount !== 0) {
-                transactions.push({
-                    date: currentDate,
-                    description: line.substring(0, 50),
-                    amount: amount
-                });
-            }
-        }
-    }
-
-    return transactions;
-}
-
-async function importPDFTransactions(transactions, accountId) {
-    if (transactions.length === 0) {
-        alert('❌ Не найдено транзакций в PDF. Возможно, неверный формат.');
+    if (!name) {
+        alert('Введите название цели');
         return;
     }
 
-    let imported = 0;
-    let totalAmount = 0;
+    if (isNaN(target) || target <= 0) {
+        alert('Введите корректную сумму');
+        return;
+    }
 
-    document.getElementById('importCount').textContent = `0/${transactions.length}`;
+    const account = appState.accounts.find(a => a.id === accountId);
+    const currentBalance = account ? account.balance : 0;
 
-    for (let i = 0; i < transactions.length; i++) {
-        const t = transactions[i];
+    const goal = {
+        id: 'goal_' + Date.now(),
+        name: name,
+        target: target,
+        current: currentBalance > target ? target : currentBalance,
+        accountId: accountId,
+        deadline: deadline || null,
+        color: color,
+        createdAt: new Date().toISOString(),
+        achieved: currentBalance >= target
+    };
 
-        // Парсим дату
-        let date = new Date();
-        if (t.date) {
-            const parts = t.date.split(/[\.\/]/);
-            if (parts.length === 3) {
-                let day = parseInt(parts[0]);
-                let month = parseInt(parts[1]) - 1;
-                let year = parseInt(parts[2]);
-                if (year < 100) year += 2000;
-                date = new Date(year, month, day);
+    if (!appState.goals) appState.goals = [];
+    appState.goals.push(goal);
+
+    saveData();
+    updateGoals();
+    hideGoalForm();
+}
+
+function updateGoals() {
+    const goalsList = document.getElementById('goalsList');
+    const noGoalsMsg = document.getElementById('noGoalsMessage');
+
+    if (!goalsList) return;
+
+    if (!appState.goals || appState.goals.length === 0) {
+        goalsList.innerHTML = '';
+        noGoalsMsg.style.display = 'block';
+        return;
+    }
+
+    noGoalsMsg.style.display = 'none';
+
+    goalsList.innerHTML = appState.goals.map(goal => {
+        const percent = (goal.current / goal.target) * 100;
+        const account = appState.accounts.find(a => a.id === goal.accountId);
+
+        // Выбираем эмодзи в зависимости от прогресса
+        let emoji = '🎯';
+        if (goal.achieved) emoji = '🏆';
+        else if (percent >= 75) emoji = '🚀';
+        else if (percent >= 50) emoji = '💪';
+        else if (percent >= 25) emoji = '⏳';
+
+        // Форматируем дату
+        let deadlineText = '';
+        if (goal.deadline) {
+            const deadline = new Date(goal.deadline);
+            const today = new Date();
+            const daysLeft = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+
+            if (daysLeft > 0) {
+                deadlineText = `⏰ Осталось ${daysLeft} дн.`;
+            } else if (daysLeft === 0) {
+                deadlineText = `⏰ Сегодня дедлайн!`;
+            } else {
+                deadlineText = `⚠️ Просрочено на ${-daysLeft} дн.`;
             }
         }
 
-        // Создаем транзакцию
-        const transaction = {
-            id: Date.now() + imported,
-            accountId: accountId,
-            type: t.amount > 0 ? 'income' : 'expense',
-            amount: Math.abs(t.amount),
-            category: detectCategoryFromDescription(t.description),
-            description: t.description,
-            date: date.toISOString()
-        };
+        return `
+            <div class="goal-item" style="border-left: 4px solid ${goal.color}">
+                <div class="goal-header">
+                    <div class="goal-name">
+                        <span class="goal-emoji">${emoji}</span>
+                        ${goal.name}
+                    </div>
+                    <div class="goal-actions">
+                        <button onclick="editGoal('${goal.id}')">✏️</button>
+                        <button onclick="deleteGoal('${goal.id}')">🗑️</button>
+                    </div>
+                </div>
 
-        appState.transactions.push(transaction);
+                <div class="goal-progress">
+                    <div class="goal-progress-bar">
+                        <div class="goal-progress-fill" style="width: ${percent}%; background: ${goal.color}"></div>
+                    </div>
+                    <div class="goal-stats">
+                        <span class="goal-current">${formatMoney(goal.current)}</span>
+                        <span class="goal-target">из ${formatMoney(goal.target)}</span>
+                    </div>
+                </div>
 
-        // Обновляем баланс
-        const account = appState.accounts.find(a => a.id === accountId);
-        if (account) {
-            account.balance += t.amount;
-            totalAmount += t.amount;
-        }
+                <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                    <span>${account ? account.name : 'Счет не найден'}</span>
+                    <span>${percent.toFixed(1)}%</span>
+                </div>
 
-        imported++;
+                ${deadlineText ? `<div class="goal-deadline">${deadlineText}</div>` : ''}
 
-        // Обновляем прогресс
-        document.getElementById('importCount').textContent = `${imported}/${transactions.length}`;
-        document.getElementById('importProgressBar').style.width = (imported / transactions.length) * 100 + '%';
-    }
-
-    // Сохраняем и обновляем
-    saveData();
-    updateUI();
-
-    // Показываем результат
-    setTimeout(() => {
-        document.getElementById('importProgress').style.display = 'none';
-
-        const totalFormatted = formatMoney(Math.abs(totalAmount));
-        const sign = totalAmount >= 0 ? 'пополнение' : 'списание';
-
-        alert(`✅ Импорт завершен!\n\n` +
-              `📊 Добавлено: ${imported} операций\n` +
-              `💰 Общий баланс: ${totalAmount >= 0 ? '+' : '-'}${totalFormatted}`);
-    }, 500);
-}
-// Дополнительные форматы для разных банков
-function parseSberPDF(text) {
-    // Специфичный парсинг для Сбера
-    const lines = text.split('\n');
-    const transactions = [];
-
-    for (let line of lines) {
-        // Пример: "01.03.2024 Покупка Пятерочка 1 500.00₽"
-        const match = line.match(/(\d{2}\.\d{2}\.\d{4})\s+(.+?)\s+(\d[\d\s]*[.,]\d{2})[₽$€]?/);
-        if (match) {
-            transactions.push({
-                date: match[1],
-                description: match[2],
-                amount: -parseFloat(match[3].replace(/\s/g, '').replace(',', '.'))
-            });
-        }
-    }
-
-    return transactions;
+                ${goal.achieved ? `
+                    <div class="goal-achieved">
+                        🏆 Цель достигнута! Поздравляем!
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
 }
 
-function parseTinkoffPDF(text) {
-    // Специфичный парсинг для Тинькофф
-    const transactions = [];
-    const lines = text.split('\n');
+function editGoal(goalId) {
+    const goal = appState.goals.find(g => g.id === goalId);
+    if (!goal) return;
 
-    for (let i = 0; i < lines.length; i++) {
-        // Тинькофф часто использует таблицы
-        if (lines[i].includes('₽') && lines[i].match(/\d{2}\.\d{2}/)) {
-            // Логика парсинга
-        }
+    const newName = prompt('Новое название цели:', goal.name);
+    if (newName) {
+        goal.name = newName;
+        saveData();
+        updateGoals();
     }
-
-    return transactions;
-}
-function parseCSVLine(line) {
-    // Простой парсер CSV (учитывает кавычки)
-    const result = [];
-    let inQuotes = false;
-    let current = '';
-
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-
-        if (char === '"') {
-            inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-            result.push(current);
-            current = '';
-        } else {
-            current += char;
-        }
-    }
-
-    result.push(current);
-    return result;
 }
 
-function getBankNameFromFile(fileName, csvText) {
-    const name = fileName.toLowerCase();
-    const text = csvText.toLowerCase();
-
-    // Определяем банк по имени файла или содержимому
-    if (name.includes('sber') || name.includes('сбер') || text.includes('сбербанк') || text.includes('sberbank')) {
-        return 'Сбербанк';
+function deleteGoal(goalId) {
+    if (confirm('Удалить цель?')) {
+        appState.goals = appState.goals.filter(g => g.id !== goalId);
+        saveData();
+        updateGoals();
     }
-    if (name.includes('tinkoff') || name.includes('тинькофф') || text.includes('tinkoff') || text.includes('тинькофф')) {
-        return 'Tinkoff';
-    }
-    if (name.includes('alfa') || name.includes('альфа') || text.includes('alfa') || text.includes('альфа')) {
-        return 'Альфа-Банк';
-    }
-    if (name.includes('vtb') || name.includes('втб') || text.includes('vtb') || text.includes('втб')) {
-        return 'ВТБ';
-    }
-    if (name.includes('raiffeisen') || name.includes('райффайзен') || text.includes('raiffeisen')) {
-        return 'Райффайзен';
-    }
-    if (name.includes('gazprom') || name.includes('газпром') || text.includes('gazprombank')) {
-        return 'Газпромбанк';
-    }
-    if (name.includes('otkritie') || name.includes('открытие') || text.includes('otkritie')) {
-        return 'Банк Открытие';
-    }
-    if (name.includes('pochta') || name.includes('почта') || text.includes('pochta')) {
-        return 'Почта Банк';
-    }
-
-    return null;
 }
 
-function createBankAccount(bankName) {
-    // Иконки для разных банков
-    const bankIcons = {
-        'Сбербанк': '🏦',
-        'Tinkoff': '💳',
-        'Альфа-Банк': '🏛️',
-        'ВТБ': '🏢',
-        'Райффайзен': '🇦🇹',
-        'Газпромбанк': '⛽',
-        'Банк Открытие': '🔓',
-        'Почта Банк': '📮'
-    };
+// Обновляем функцию updateUI, чтобы обновлять цели
+function updateUI() {
+    const activeAccount = appState.accounts.find(a => a.id === appState.activeAccount);
+    if (activeAccount) document.getElementById('balance').textContent = formatMoney(activeAccount.balance);
 
-    // Цвета для разных банков
-    const bankColors = {
-        'Сбербанк': '#3CB371',  // зеленый
-        'Tinkoff': '#FFDD00',    // желтый
-        'Альфа-Банк': '#E31B23', // красный
-        'ВТБ': '#003C7F',        // синий
-        'Райффайзен': '#FDB913', // желтый
-        'Газпромбанк': '#1B4F9E', // синий
-        'Банк Открытие': '#00AEEF', // голубой
-        'Почта Банк': '#660099'   // фиолетовый
-    };
+    filterTransactionsByAccount();
+    updateGoals(); // ← добавляем обновление целей
 
-    // Проверяем, есть ли уже такой счет
-    let existingAccount = appState.accounts.find(a => a.name.includes(bankName));
-
-    if (existingAccount) {
-        return existingAccount.id;
+    if (currentTab === 'main') {
+        updateStatsByPeriod();
+    } else if (currentTab === 'analytics') {
+        updateStatsByPeriod();
+        updateCharts();
+    } else if (currentTab === 'plans') {
+        updatePlans();
     }
 
-    // Создаем новый счет для банка
-    const newAccount = {
-        id: 'bank_' + bankName.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now(),
-        name: `${bankIcons[bankName] || '🏦'} ${bankName}`,
-        type: 'debit',
-        balance: 0,
-        currency: 'RUB',
-        icon: bankIcons[bankName] || '🏦',
-        color: bankColors[bankName] || '#808080',
-        isBank: true
-    };
-
-    appState.accounts.push(newAccount);
-
-    // Обновляем интерфейс
-    updateAccountSelector();
     updateAccountsSummary();
-    saveData();
-
-    console.log(`✅ Создан счет для банка: ${newAccount.name}`);
-    return newAccount.id;
 }
 
-function detectCategoryFromDescription(text) {
-    text = text.toLowerCase();
-
-    // Категории расходов
-    if (text.includes('пятерочка') || text.includes('магнит') || text.includes('перекресток') ||
-        text.includes('продукт') || text.includes('еда') || text.includes('food')) {
-        return 'food';
-    }
-
-    if (text.includes('аптека') || text.includes('здоровье') || text.includes('лекар')) {
-        return 'health';
-    }
-
-    if (text.includes('такси') || text.includes('uber') || text.includes('яндекс') ||
-        text.includes('metro') || text.includes('транспорт')) {
-        return 'transport';
-    }
-
-    if (text.includes('одежда') || text.includes('zara') || text.includes('h&m')) {
-        return 'clothes';
-    }
-
-    if (text.includes('ресторан') || text.includes('кафе') || text.includes('кофе')) {
-        return 'food';
-    }
-
-    if (text.includes('кино') || text.includes('театр') || text.includes('клуб')) {
-        return 'entertainment';
-    }
-
-    if (text.includes('мтс') || text.includes('билайн') || text.includes('мегафон')) {
-        return 'communication';
-    }
-
-    if (text.includes('авито') || text.includes('avito')) {
-        return 'other_expense';
-    }
-
-    // Категории доходов
-    if (text.includes('зарплата') || text.includes('аванс')) {
-        return 'salary';
-    }
-
-    if (text.includes('перевод')) {
-        return 'transfer';
-    }
-
-    return 'other_expense';
-}
