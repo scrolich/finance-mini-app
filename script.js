@@ -1906,7 +1906,6 @@ function saveGoal() {
     const name = document.getElementById('goalName').value;
     const target = parseFloat(document.getElementById('goalTarget').value);
     const accountId = document.getElementById('goalAccount').value;
-    const deadline = document.getElementById('goalDeadline').value;
     const color = document.getElementById('goalColor').value;
 
     if (!name) {
@@ -1928,10 +1927,10 @@ function saveGoal() {
         target: target,
         current: currentBalance > target ? target : currentBalance,
         accountId: accountId,
-        deadline: deadline || null,
         color: color,
         createdAt: new Date().toISOString(),
         achieved: currentBalance >= target
+        // deadline удален
     };
 
     if (!appState.goals) appState.goals = [];
@@ -1967,22 +1966,6 @@ function updateGoals() {
         else if (percent >= 50) emoji = '💪';
         else if (percent >= 25) emoji = '⏳';
 
-        // Форматируем дату
-        let deadlineText = '';
-        if (goal.deadline) {
-            const deadline = new Date(goal.deadline);
-            const today = new Date();
-            const daysLeft = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
-
-            if (daysLeft > 0) {
-                deadlineText = `⏰ Осталось ${daysLeft} дн.`;
-            } else if (daysLeft === 0) {
-                deadlineText = `⏰ Сегодня дедлайн!`;
-            } else {
-                deadlineText = `⚠️ Просрочено на ${-daysLeft} дн.`;
-            }
-        }
-
         return `
             <div class="goal-item" style="border-left: 4px solid ${goal.color}">
                 <div class="goal-header">
@@ -2011,7 +1994,7 @@ function updateGoals() {
                     <span>${percent.toFixed(1)}%</span>
                 </div>
 
-                ${deadlineText ? `<div class="goal-deadline">${deadlineText}</div>` : ''}
+                <!-- БЛОК С ДЕДЛАЙНОМ УДАЛЕН -->
 
                 ${goal.achieved ? `
                     <div class="goal-achieved">

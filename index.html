@@ -513,45 +513,42 @@
         </div>
     </div>
 
-    <!-- ФОРМА СОЗДАНИЯ ЦЕЛИ -->
-    <div id="goalForm" class="form-modal" style="display: none;">
-        <div class="form-header">
-            <h2>🎯 Новая цель</h2>
-            <button class="close-btn" onclick="hideGoalForm()">✖</button>
+    <<!-- ФОРМА СОЗДАНИЯ ЦЕЛИ (исправленная) -->
+<div id="goalForm" class="form-modal" style="display: none;">
+    <div class="form-header">
+        <h2>🎯 Новая цель</h2>
+        <button class="close-btn" onclick="hideGoalForm()">✖</button>
+    </div>
+
+    <div class="form-body">
+        <div class="form-group">
+            <label>Название цели</label>
+            <input type="text" id="goalName" placeholder="Например: iPhone 15 Pro">
         </div>
 
-        <div class="form-body">
-            <div class="form-group">
-                <label>Название цели</label>
-                <input type="text" id="goalName" placeholder="Например: iPhone 15 Pro">
-            </div>
-
-            <div class="form-group">
-                <label>Нужная сумма (₽)</label>
-                <input type="number" id="goalTarget" placeholder="100000" step="0.01">
-            </div>
-
-            <div class="form-group">
-                <label>Счет для накоплений</label>
-                <select id="goalAccount"></select>
-            </div>
-
-            <div class="form-group">
-                <label>Дедлайн (необязательно)</label>
-                <input type="date" id="goalDeadline">
-            </div>
-
-            <div class="form-group">
-                <label>Цвет цели</label>
-                <input type="color" id="goalColor" value="#8b5cf6">
-            </div>
+        <div class="form-group">
+            <label>Нужная сумма (₽)</label>
+            <input type="number" id="goalTarget" placeholder="100000" step="0.01">
         </div>
 
-        <div class="form-footer">
-            <button class="btn btn-primary" onclick="saveGoal()">✅ Создать цель</button>
-            <button class="btn btn-secondary" onclick="hideGoalForm()">❌ Отмена</button>
+        <div class="form-group">
+            <label>Счет для накоплений</label>
+            <select id="goalAccount"></select>
+        </div>
+
+        <!-- ПОЛЕ ДЕДЛАЙНА УДАЛЕНО -->
+
+        <div class="form-group">
+            <label>Цвет цели</label>
+            <input type="color" id="goalColor" value="#8b5cf6">
         </div>
     </div>
+
+    <div class="form-footer">
+        <button class="btn btn-primary" onclick="saveGoal()">✅ Создать цель</button>
+        <button class="btn btn-secondary" onclick="hideGoalForm()">❌ Отмена</button>
+    </div>
+</div>
 
     <!-- Модальное окно начального баланса -->
     <div id="initialBalanceModal" class="initial-balance-modal" style="display: none;">
