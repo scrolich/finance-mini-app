@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Финансовый трекер</title>
 
-
     <!-- PWA мета-теги -->
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -19,7 +18,6 @@
     <!-- Библиотеки -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
     <!-- CSS -->
     <link rel="stylesheet" href="style.css">
@@ -59,7 +57,7 @@
             </button>
         </div>
 
-        <!-- Контент главной страницы -->
+        <!-- Главная страница -->
         <div id="main-content">
             <!-- Кнопки дохода и расхода -->
             <div class="actions">
@@ -92,26 +90,32 @@
                 </div>
             </div>
 
+            <!-- ЦЕЛИ НА ГЛАВНОМ -->
+            <div class="card">
+                <div class="card-title">
+                    <span>🎯 Мои цели</span>
+                    <button class="btn-icon-small" onclick="showGoalForm()">➕</button>
+                </div>
+
+                <!-- Список целей -->
+                <div id="goalsList" class="goals-list"></div>
+
+                <!-- Если нет целей -->
+                <div id="noGoalsMessage" style="text-align: center; padding: 30px; color: var(--hint-color); display: none;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">🎯</div>
+                    <div>Нет целей</div>
+                    <small>Нажмите + чтобы создать цель</small>
+                </div>
+            </div>
+
             <!-- Последние операции -->
             <div class="card">
                 <div class="card-title">📜 Последние операции</div>
                 <div id="history" class="history-list"></div>
             </div>
-
-            <!-- Бюджет (быстрый доступ) -->
-            <div class="card">
-                <div class="card-title">🎯 Бюджет месяца</div>
-                <div class="budget-progress">
-                    <div class="progress-bar" id="budgetBar" style="width: 0%"></div>
-                </div>
-                <div class="budget-stats">
-                    <span id="spentAmount">0 ₽</span> / <span id="budgetAmount">0 ₽</span>
-                </div>
-                <button class="btn btn-small" onclick="switchTab('analytics')">Подробнее в аналитике</button>
-            </div>
         </div>
 
-        <!-- Контент страницы аналитики -->
+        <!-- Страница аналитики -->
         <div id="analytics-content" style="display: none;">
             <!-- Переключатель валют -->
             <div class="currency-buttons">
@@ -216,26 +220,9 @@
                     <div id="expenseCategoriesList"></div>
                 </div>
             </div>
-
-            <!-- Цели -->
-            <div class="card">
-                <div class="card-title">
-                    <span>🎯 Мои цели</span>
-                    <button class="btn-icon-small" onclick="showGoalForm()">➕</button>
-                </div>
-
-                <!-- Список целей -->
-                <div id="goalsList" class="goals-list"></div>
-
-                <!-- Если нет целей -->
-                <div id="noGoalsMessage" style="text-align: center; padding: 20px; color: var(--hint-color); display: none;">
-                    🎯 Нет целей<br>
-                    <small>Нажмите + чтобы создать цель</small>
-                </div>
-            </div>
         </div>
 
-        <!-- Контент страницы планов (изначально скрыт) -->
+        <!-- Страница планов -->
         <div id="plans-content" style="display: none;">
             <!-- Планы расходов -->
             <div class="card">
@@ -336,26 +323,6 @@
         <div class="form-footer">
             <button class="btn btn-primary" onclick="saveTransaction()">✅ Сохранить</button>
             <button class="btn btn-secondary" onclick="hideForm()">❌ Отмена</button>
-        </div>
-    </div>
-
-    <!-- Форма установки бюджета -->
-    <div id="budgetForm" class="form-modal" style="display: none;">
-        <div class="form-header">
-            <h2>🎯 Установить бюджет</h2>
-            <button class="close-btn" onclick="hideBudgetForm()">✖</button>
-        </div>
-
-        <div class="form-body">
-            <div class="form-group">
-                <label>Месячный бюджет (₽)</label>
-                <input type="number" id="budgetInput" placeholder="50000">
-            </div>
-        </div>
-
-        <div class="form-footer">
-            <button class="btn btn-primary" onclick="saveBudget()">✅ Сохранить</button>
-            <button class="btn btn-secondary" onclick="hideBudgetForm()">❌ Отмена</button>
         </div>
     </div>
 
@@ -546,6 +513,46 @@
         </div>
     </div>
 
+    <!-- ФОРМА СОЗДАНИЯ ЦЕЛИ -->
+    <div id="goalForm" class="form-modal" style="display: none;">
+        <div class="form-header">
+            <h2>🎯 Новая цель</h2>
+            <button class="close-btn" onclick="hideGoalForm()">✖</button>
+        </div>
+
+        <div class="form-body">
+            <div class="form-group">
+                <label>Название цели</label>
+                <input type="text" id="goalName" placeholder="Например: iPhone 15 Pro">
+            </div>
+
+            <div class="form-group">
+                <label>Нужная сумма (₽)</label>
+                <input type="number" id="goalTarget" placeholder="100000" step="0.01">
+            </div>
+
+            <div class="form-group">
+                <label>Счет для накоплений</label>
+                <select id="goalAccount"></select>
+            </div>
+
+            <div class="form-group">
+                <label>Дедлайн (необязательно)</label>
+                <input type="date" id="goalDeadline">
+            </div>
+
+            <div class="form-group">
+                <label>Цвет цели</label>
+                <input type="color" id="goalColor" value="#8b5cf6">
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button class="btn btn-primary" onclick="saveGoal()">✅ Создать цель</button>
+            <button class="btn btn-secondary" onclick="hideGoalForm()">❌ Отмена</button>
+        </div>
+    </div>
+
     <!-- Модальное окно начального баланса -->
     <div id="initialBalanceModal" class="initial-balance-modal" style="display: none;">
         <div class="initial-balance-content">
@@ -558,6 +565,8 @@
         </div>
     </div>
 
+    <!-- JavaScript -->
+    <script src="script.js"></script>
 
     <!-- КРАСИВАЯ ГЛАВНАЯ КНОПКА -->
     <div class="floating-action">
@@ -582,212 +591,15 @@
                 <span class="quick-icon">🔄</span>
                 <span class="quick-text">Перевод</span>
             </button>
+            <button class="quick-action" onclick="showGoalForm(); hideQuickActions()">
+                <span class="quick-icon">🎯</span>
+                <span class="quick-text">Новая цель</span>
+            </button>
             <button class="quick-action" onclick="showPlanForm(); hideQuickActions()">
                 <span class="quick-icon">📋</span>
                 <span class="quick-text">Новый план</span>
             </button>
-            <button class="quick-action" onclick="showAccountForm(); hideQuickActions()">
-                <span class="quick-icon">🏦</span>
-                <span class="quick-text">Новый счет</span>
-            </button>
         </div>
     </div>
-
-    <!-- JavaScript -->
-    <script src="script.js"></script>
-
-
-
-    <script>
-        (function() {
-            const SERVER_URL = 'https://finance-mini-app.vercel.app';
-            const STORAGE_KEY = 'financeData';
-            let deviceId = localStorage.getItem('deviceId');
-
-            if (!deviceId) {
-                deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('deviceId', deviceId);
-            }
-
-            async function syncToServer() {
-                try {
-                    const data = localStorage.getItem(STORAGE_KEY);
-                    if (!data) return;
-                    const response = await fetch(`${SERVER_URL}/api/sync`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Device-ID': deviceId
-                        },
-                        body: data
-                    });
-                    if (response.ok) {
-                        console.log('✅ Данные отправлены в облако');
-                    }
-                } catch (e) {
-                    console.log('❌ Ошибка отправки:', e);
-                }
-            }
-
-            async function syncFromServer() {
-                try {
-                    const response = await fetch(`${SERVER_URL}/api/load`, {
-                        headers: { 'X-Device-ID': deviceId }
-                    });
-                    const result = await response.json();
-                    if (result.data) {
-                        const localData = localStorage.getItem(STORAGE_KEY);
-                        if (!localData || JSON.stringify(result.data) !== localData) {
-                            console.log('📥 Загружаем данные с сервера');
-                            localStorage.setItem(STORAGE_KEY, JSON.stringify(result.data));
-                            if (window.appState) {
-                                Object.assign(window.appState, result.data);
-                                if (window.updateUI) window.updateUI();
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.log('❌ Ошибка загрузки:', e);
-                }
-            }
-
-            const originalSaveData = window.saveData;
-            window.saveData = function() {
-                if (originalSaveData) originalSaveData();
-                syncToServer();
-            };
-
-            setTimeout(syncFromServer, 1000);
-            setInterval(syncFromServer, 30000);
-            window.addEventListener('focus', syncFromServer);
-            console.log('🔄 Система синхронизации запущена с', SERVER_URL);
-        })();
-    </script>
-
-    <!-- Функции для красивой кнопки -->
-    <script>
-        function showQuickActions() {
-            document.getElementById('quickMenu').style.display = 'flex';
-        }
-
-        function hideQuickActions() {
-            document.getElementById('quickMenu').style.display = 'none';
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') hideQuickActions();
-        });
-    </script>
-<script>
-    // ЖЕСТКИЙ ПИНДОК ДЛЯ PWA
-    (function() {
-        const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                     window.navigator.standalone === true;
-
-        console.log('💥 Режим:', isPWA ? 'PWA' : 'Браузер');
-
-        // Если это PWA — ***ем кэш в ***
-        if (isPWA) {
-            console.log('💥 PWA режим — убиваем кэш на ***');
-
-            // 1. Удаляем всё хранилище на ***
-            localStorage.clear();
-
-            // 2. Загружаем свежие данные с сервера
-            fetch('https://finance-mini-app.vercel.app/api/load')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.data) {
-                        localStorage.setItem('financeData', JSON.stringify(data.data));
-                        if (window.appState) {
-                            Object.assign(window.appState, data.data);
-                            if (window.updateUI) window.updateUI();
-                        }
-                        console.log('💥 Данные загружены с сервера');
-                    }
-                });
-
-            // 3. ***им перезагрузку каждую секунду
-            setInterval(() => {
-                fetch('https://finance-mini-app.vercel.app/api/load')
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.data) {
-                            const localData = localStorage.getItem('financeData');
-                            if (JSON.stringify(data.data) !== localData) {
-                                console.log('💥 Обновляем данные');
-                                localStorage.setItem('financeData', JSON.stringify(data.data));
-                                if (window.appState) {
-                                    Object.assign(window.appState, data.data);
-                                    if (window.updateUI) window.updateUI();
-                                }
-                            }
-                        }
-                    });
-            }, 1000); // КАЖДУЮ СЕКУНДУ
-        }
-
-        // Для браузера тоже проверяем каждые 2 секунды
-        setInterval(() => {
-            fetch('https://finance-mini-app.vercel.app/api/load')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.data) {
-                        const localData = localStorage.getItem('financeData');
-                        if (JSON.stringify(data.data) !== localData) {
-                            console.log('💥 Обновляем данные в браузере');
-                            localStorage.setItem('financeData', JSON.stringify(data.data));
-                            if (window.appState) {
-                                Object.assign(window.appState, data.data);
-                                if (window.updateUI) window.updateUI();
-                            }
-                        }
-                    }
-                });
-        }, 2000);
-    })();
-</script>
-
-<!-- Форма создания цели -->
-<div id="goalForm" class="form-modal" style="display: none;">
-    <div class="form-header">
-        <h2>🎯 Новая цель</h2>
-        <button class="close-btn" onclick="hideGoalForm()">✖</button>
-    </div>
-
-    <div class="form-body">
-        <div class="form-group">
-            <label>Название цели</label>
-            <input type="text" id="goalName" placeholder="Например: iPhone 15 Pro">
-        </div>
-
-        <div class="form-group">
-            <label>Нужная сумма (₽)</label>
-            <input type="number" id="goalTarget" placeholder="100000" step="0.01">
-        </div>
-
-        <div class="form-group">
-            <label>Счет для накоплений</label>
-            <select id="goalAccount">
-                <!-- Заполнится динамически -->
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Дедлайн (необязательно)</label>
-            <input type="date" id="goalDeadline">
-        </div>
-
-        <div class="form-group">
-            <label>Цвет цели</label>
-            <input type="color" id="goalColor" value="#8b5cf6">
-        </div>
-    </div>
-
-    <div class="form-footer">
-        <button class="btn btn-primary" onclick="saveGoal()">✅ Создать цель</button>
-        <button class="btn btn-secondary" onclick="hideGoalForm()">❌ Отмена</button>
-    </div>
-</div>
 </body>
 </html>
