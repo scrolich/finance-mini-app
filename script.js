@@ -2123,6 +2123,228 @@ function parseCSV(csvText, accountId, bankName) {
     }, 500);
 }
 
+// ===== ИМПОРТ ИЗ PDF =====
+async function handlePDFUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Показываем прогресс
+    document.getElementById('importProgress').style.display = 'block';
+    document.getElementById('importProgressBar').style.width = '0%';
+    document.getElementById('importCount').textContent = 'Чтение PDF...';
+
+    try {
+        // Читаем PDF файл
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+        let fullText = '';
+
+        // Проходим по всем страницам
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += pageText + '\n';
+
+            // Обновляем прогресс
+            const percent = (i / pdf.numPages) * 100;
+            document.getElementById('importProgressBar').style.width = percent + '%';
+            document.getElementById('importCount').textContent = `Страница ${i} из ${pdf.numPages}`;
+        }
+
+        // Определяем банк по тексту
+        const bankName = detectBankFromPDF(fullText);
+
+        // Создаем счет для банка
+        const accountId = createBankAccount(bankName);
+        setActiveAccount(accountId);
+
+        // Парсим транзакции из текста
+        const transactions = parsePDFText(fullText, bankName);
+
+        // Импортируем транзакции
+        await importPDFTransactions(transactions, accountId);
+
+    } catch (error) {
+        console.error('Ошибка при чтении PDF:', error);
+        alert('❌ Не удалось прочитать PDF файл. Убедитесь, что это выписка из банка.');
+    }
+}
+
+function detectBankFromPDF(text) {
+    text = text.toLowerCase();
+
+    if (text.includes('сбербанк') || text.includes('sberbank')) {
+        return 'Сбербанк';
+    }
+    if (text.includes('тинькофф') || text.includes('tinkoff')) {
+        return 'Tinkoff';
+    }
+    if (text.includes('альфа') || text.includes('alfa')) {
+        return 'Альфа-Банк';
+    }
+    if (text.includes('втб') || text.includes('vtb')) {
+        return 'ВТБ';
+    }
+    if (text.includes('райффайзен') || text.includes('raiffeisen')) {
+        return 'Райффайзен';
+    }
+
+    return 'Банк (неизвестный)';
+}
+
+function parsePDFText(text, bankName) {
+    const lines = text.split('\n');
+    const transactions = [];
+
+    // Регулярные выражения для поиска транзакций
+    const dateRegex = /\d{2}[\.\/]\d{2}[\.\/]\d{2,4}/g; // 01.01.2024
+    const amountRegex = /[\+\-]?\s*[\d\s]+[.,]\d{2}\s*[₽$€]?/g;
+
+    let currentDate = null;
+
+    for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+
+        // Ищем дату
+        const dateMatch = line.match(dateRegex);
+        if (dateMatch) {
+            currentDate = dateMatch[0];
+        }
+
+        // Ищем сумму
+        const amountMatch = line.match(amountRegex);
+        if (amountMatch && currentDate) {
+            let amountStr = amountMatch[0].replace(/\s/g, '').replace(',', '.').replace(/[₽$€]/g, '');
+            let amount = parseFloat(amountStr) || 0;
+
+            // Определяем знак (дебет/кредит)
+            if (line.includes('дебет') || line.includes('списание') || amount < 0) {
+                amount = -Math.abs(amount);
+            } else if (line.includes('кредит') || line.includes('поступление')) {
+                amount = Math.abs(amount);
+            }
+
+            if (amount !== 0) {
+                transactions.push({
+                    date: currentDate,
+                    description: line.substring(0, 50),
+                    amount: amount
+                });
+            }
+        }
+    }
+
+    return transactions;
+}
+
+async function importPDFTransactions(transactions, accountId) {
+    if (transactions.length === 0) {
+        alert('❌ Не найдено транзакций в PDF. Возможно, неверный формат.');
+        return;
+    }
+
+    let imported = 0;
+    let totalAmount = 0;
+
+    document.getElementById('importCount').textContent = `0/${transactions.length}`;
+
+    for (let i = 0; i < transactions.length; i++) {
+        const t = transactions[i];
+
+        // Парсим дату
+        let date = new Date();
+        if (t.date) {
+            const parts = t.date.split(/[\.\/]/);
+            if (parts.length === 3) {
+                let day = parseInt(parts[0]);
+                let month = parseInt(parts[1]) - 1;
+                let year = parseInt(parts[2]);
+                if (year < 100) year += 2000;
+                date = new Date(year, month, day);
+            }
+        }
+
+        // Создаем транзакцию
+        const transaction = {
+            id: Date.now() + imported,
+            accountId: accountId,
+            type: t.amount > 0 ? 'income' : 'expense',
+            amount: Math.abs(t.amount),
+            category: detectCategoryFromDescription(t.description),
+            description: t.description,
+            date: date.toISOString()
+        };
+
+        appState.transactions.push(transaction);
+
+        // Обновляем баланс
+        const account = appState.accounts.find(a => a.id === accountId);
+        if (account) {
+            account.balance += t.amount;
+            totalAmount += t.amount;
+        }
+
+        imported++;
+
+        // Обновляем прогресс
+        document.getElementById('importCount').textContent = `${imported}/${transactions.length}`;
+        document.getElementById('importProgressBar').style.width = (imported / transactions.length) * 100 + '%';
+    }
+
+    // Сохраняем и обновляем
+    saveData();
+    updateUI();
+
+    // Показываем результат
+    setTimeout(() => {
+        document.getElementById('importProgress').style.display = 'none';
+
+        const totalFormatted = formatMoney(Math.abs(totalAmount));
+        const sign = totalAmount >= 0 ? 'пополнение' : 'списание';
+
+        alert(`✅ Импорт завершен!\n\n` +
+              `📊 Добавлено: ${imported} операций\n` +
+              `💰 Общий баланс: ${totalAmount >= 0 ? '+' : '-'}${totalFormatted}`);
+    }, 500);
+}
+// Дополнительные форматы для разных банков
+function parseSberPDF(text) {
+    // Специфичный парсинг для Сбера
+    const lines = text.split('\n');
+    const transactions = [];
+
+    for (let line of lines) {
+        // Пример: "01.03.2024 Покупка Пятерочка 1 500.00₽"
+        const match = line.match(/(\d{2}\.\d{2}\.\d{4})\s+(.+?)\s+(\d[\d\s]*[.,]\d{2})[₽$€]?/);
+        if (match) {
+            transactions.push({
+                date: match[1],
+                description: match[2],
+                amount: -parseFloat(match[3].replace(/\s/g, '').replace(',', '.'))
+            });
+        }
+    }
+
+    return transactions;
+}
+
+function parseTinkoffPDF(text) {
+    // Специфичный парсинг для Тинькофф
+    const transactions = [];
+    const lines = text.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+        // Тинькофф часто использует таблицы
+        if (lines[i].includes('₽') && lines[i].match(/\d{2}\.\d{2}/)) {
+            // Логика парсинга
+        }
+    }
+
+    return transactions;
+}
 function parseCSVLine(line) {
     // Простой парсер CSV (учитывает кавычки)
     const result = [];

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Финансовый трекер</title>
 
+
     <!-- PWA мета-теги -->
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,6 +19,7 @@
     <!-- Библиотеки -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
     <!-- CSS -->
     <link rel="stylesheet" href="style.css">
@@ -818,22 +820,22 @@
         </div>
     </div>
 
-    <!-- Скрытый input для загрузки файла -->
-    <input type="file" id="csvUpload" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
+    <!-- Кнопка загрузки PDF -->
+<input type="file" id="pdfUpload" accept=".pdf" style="display: none;" onchange="handlePDFUpload(event)">
 
-    <!-- Кнопка загрузки -->
-    <button class="btn btn-primary" onclick="document.getElementById('csvUpload').click()" style="width: 100%;">
-        📤 Загрузить выписку CSV
-    </button>
+<button class="btn btn-primary" onclick="document.getElementById('pdfUpload').click()" style="width: 100%;">
+    📄 Загрузить выписку PDF
+</button>
 
-    <!-- Прогресс импорта -->
-    <div id="importProgress" style="display: none; margin-top: 15px;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-            <span>Импорт...</span>
-            <span id="importCount">0</span>
-        </div>
-        <div class="progress-bar" id="importProgressBar" style="width: 0%; height: 4px;"></div>
+<!-- Добавь подсказку -->
+    <div style="margin-top: 10px; font-size: 12px; color: var(--hint-color); background: rgba(0,0,0,0.02); padding: 10px; border-radius: 8px;">
+        <strong>📌 Как скачать выписку:</strong>
+        <ol style="margin-top: 5px; padding-left: 20px;">
+            <li>Зайдите в интернет-банк</li>
+            <li>Найдите "История операций" или "Выписка"</li>
+            <li>Выберите период и нажмите "Скачать PDF"</li>
+            <li>Загрузите файл сюда</li>
+        </ol>
     </div>
-</div>
 </body>
 </html>
